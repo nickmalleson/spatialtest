@@ -1,0 +1,7 @@
+# This file stores program parameters to make it quicker to load a a test many times.
+# You can edit the filenames after a '$'
+base points$/Users/nick/Documents/Dropbox/phd/model/netbeans_workspace/AndresenSpatialTest/./data/points1.shp
+test points$/Users/nick/Documents/Dropbox/phd/model/netbeans_workspace/AndresenSpatialTest/./data/points2.shp
+area input$/Users/nick/Documents/Dropbox/phd/model/netbeans_workspace/AndresenSpatialTest/./data/areas.shp
+area output$/Users/nick/Documents/Dropbox/phd/model/netbeans_workspace/AndresenSpatialTest/./data/areas.shp
+monte carlo$100
