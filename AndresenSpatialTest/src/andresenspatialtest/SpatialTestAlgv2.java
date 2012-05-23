@@ -1,18 +1,19 @@
-/*This file is part of SpatialTest.
-
-SpatialTest is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-SpatialTest is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with SpatialTest.  If not, see <http://www.gnu.org/licenses/>.*/
-
+/*
+ * Copyright 2009 Nick Malleson
+ * This file is part of AndresenSpatialTest.
+ * AndresenSpatialTest is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * AndresenSpatialTest is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with AndresenSpatialTest. If not, see <http://www.gnu.org/licenses/>.
+ */
 package andresenspatialtest;
 
 import java.io.File;
@@ -74,8 +75,9 @@ public class SpatialTestAlgv2 {
     // Other variables
     private int monteCarlo = 100;			// Number of times to run Monte Carlo simulation
     private int samplePercentage = 85;  // Percenatage of observations to use in a test sample.
+    private int confidenceInterval = 95; // The confidece interval.
     private double globalS;         // The global S index value calculated once the simulation has run
-    
+
     // Option of using area files as input and generating sudo points, not implemented yet
     private String basePointsField = null;
     private String testPointsField = null;
@@ -92,14 +94,14 @@ public class SpatialTestAlgv2 {
         this.areas = new ArrayList<Area>();
     }
 
-    
+
 
     /* ****** MAIN PROGRAM ****** */
 
     /** Run the algorithm. This function is called once all the required variables
      have been set and actually performs the test */
     public boolean runAlgorithm() {
-        
+
         // TODO: Check shapefiles are valid
 
         output("Will run algorithm with following parameters: \n" +
@@ -115,7 +117,7 @@ public class SpatialTestAlgv2 {
         this.testGeometries = readPointsShapefile(testShapefile, null, false);
         readPointsShapefile(areaShapefile, this.areas, true);
         output("Have read in " + this.baseGeometries.size() + " base points, " +
-                this.testGeometries.size() + " test points" + " and " + this.areas.size() + " areas.");
+                this.testGeometries.size() + " test points, " + this.areas.size() + " areas.");
 
         // Need to know how many base and test points there are in total for calculating
         // percentages later.
@@ -168,7 +170,8 @@ public class SpatialTestAlgv2 {
         }
 
         /* For each area, rank the percentages in ascending order and remove outliers */
-        int numToRemove = (int) Math.round((this.monteCarlo * 0.05) / 2.0); // The number of samples to remove
+        double removePercentage = (100.0-this.confidenceInterval)/100.0;
+        int numToRemove = (int) Math.round((this.monteCarlo * removePercentage) / 2.0); // The number of samples to remove
         output("Ranking percentages in ascending order and removing " + numToRemove + " outliers from top and bottom");
         for (Area a : this.areas) {
             // Sort the list of percentages
@@ -176,7 +179,7 @@ public class SpatialTestAlgv2 {
             Arrays.sort(percentages);
             // (List converted to a Vector to allow remove() operation, otherwise not supported)
             a.pTestPoitsNoOutliers = new Vector<Double>(Arrays.asList(percentages));
-            
+
             // Remove upper and lower outliers
             for (int i = 0; i < numToRemove; i++) { // Remove from start of list
                 a.pTestPoitsNoOutliers.remove(0); // (all objects shifted along when one removed)
@@ -219,6 +222,9 @@ public class SpatialTestAlgv2 {
         output("Outputting shapefile of areas: " + this.outputShapefile.getName());
         outputNewAreas(this.areas, this.outputShapefile);
         output("ALGORITHM HAS FINISHED");
+
+        output("Have read in " + this.baseGeometries.size() + " base points, " +
+                this.testGeometries.size() + " test points (" + (this.testGeometries.size()-(int) Math.round(this.testGeometries.size() * ((100 - this.samplePercentage) / 100.0)))+ " test point used) and " + this.areas.size() + " areas.");
 
         return true;
     } // runAlgorithm
@@ -509,6 +515,20 @@ public class SpatialTestAlgv2 {
    public static String getSIndexColumnName() {
       return SpatialTestAlgv2.SIndexColumnName;
    }
+
+    /**
+     * @return the confidenceInterval
+     */
+    public int getConfidenceInterval() {
+        return confidenceInterval;
+    }
+
+    /**
+     * @param confidenceInterval the confidenceInterval to set
+     */
+    public void setConfidenceInterval(int confidenceInterval) {
+        this.confidenceInterval = confidenceInterval;
+    }
 
 
 }
