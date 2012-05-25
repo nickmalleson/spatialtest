@@ -54,6 +54,7 @@ import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.feature.SchemaException;
 import org.geotools.geometry.jts.JTSFactoryFinder;
 import org.geotools.referencing.CRS;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
@@ -141,8 +142,9 @@ public class SpatialTestAlgv2 {
             // later (this is done automatically by readShapefile)
             SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
             builder.setName("OutGrids"); // ?
-            assert SpatialTestAlgv2.crs != null; // This should have been set by readShapefile()
-            builder.setCRS(SpatialTestAlgv2.crs);
+            // The crs should have been set in readShapefile(), but if the input data don't
+            // have an associated projection it will be null; so use WGS84
+            builder.setCRS(SpatialTestAlgv2.crs == null ? DefaultGeographicCRS.WGS84 : SpatialTestAlgv2.crs);
 
 //             add attributes in order
 //            builder.add("Location", Point.class);
@@ -303,7 +305,8 @@ public class SpatialTestAlgv2 {
             String typeName = typeNames[0];
 
             FeatureSource<SimpleFeatureType, SimpleFeature> featureSource = dataStore.getFeatureSource(typeName);
-            SpatialTestAlgv2.crs = featureSource.getInfo().getCRS(); // Remember the CRS, useful for building output features
+            // Remember the CRS, useful for building output features
+            SpatialTestAlgv2.crs = featureSource.getInfo().getCRS();
             if (writeFeatureSource) {
 //                Area.featureSource = featureSource;
                 Area.featureType = featureSource.getFeatures().iterator().next().getFeatureType();
@@ -472,10 +475,14 @@ public class SpatialTestAlgv2 {
 
             checkFile(areaShapefile); // See if file needs to be deleted
 
+            // Work out the CRS ID (either from a previous shapefile or useing WGS84 as default)
+            int srid = SpatialTestAlgv2.crs==null ?
+                CRS.lookupEpsgCode(DefaultGeographicCRS.WGS84, true) :
+                CRS.lookupEpsgCode(SpatialTestAlgv2.crs, true);
             // Need to describe data manually because no shapefile existing features to use as a definition.
             final SimpleFeatureType TYPE = DataUtilities.createType("Location",
                     //                    "location:Point:srid=4326," + // <- the geometry attribute: Point type
-                    "location:Polygon:srid="+CRS.lookupEpsgCode(SpatialTestAlgv2.crs, true)+","
+                    "location:Polygon:srid="+srid+","
                     + SIndexColumnName + ":Integer,"
                     + "NumBsePts:Integer,"
                     + "NumTstPts:Integer,"
@@ -492,11 +499,6 @@ public class SpatialTestAlgv2 {
             for (Area a : areas2) {
                 SimpleFeature newFeature;
                 newFeature = featureBuilder.buildFeature(String.valueOf(SpatialTestAlgv2.gridIDs++));
-//                a.
-//
-//                LinearRing shape = geometryFactory.createLinearRing(a.ringCoords);
-//                Polygon geometry = cellGeomFac.createPolygon(shape, new LinearRing[0]);
-//                geometries.add(geometry);
 
                 newFeature.setDefaultGeometry(a.geometry);
                 newFeature.setAttribute(SIndexColumnName, a.sVal);
@@ -504,12 +506,6 @@ public class SpatialTestAlgv2 {
                 newFeature.setAttribute("NumTstPts", a.absNumTestPoints);
                 newFeature.setAttribute("PctBsePts", a.percentageBasePoints);
                 newFeature.setAttribute("PctTstPts", a.absPercentageTestPoints);
-
-                // XXXX BUILD POLYGON OBJECTS!!!
-
-                // Above might be wrong, maybe need to add geometry to feature builder (as in ExpandingCell)
-
-//                  Point point = geometryFactory.createPoint(new Coordinate(longitude, latitude));
 
 
                 outFeatures.add(newFeature);
@@ -529,7 +525,7 @@ public class SpatialTestAlgv2 {
             ShapefileDataStore newDataStore = (ShapefileDataStore) factory.createNewDataStore(create);
             newDataStore.createSchema(TYPE);
 
-            newDataStore.forceSchemaCRS(SpatialTestAlgv2.crs); // necessary?
+//            newDataStore.forceSchemaCRS(SpatialTestAlgv2.crs); // necessary?
 
             Transaction transaction = new DefaultTransaction("create");
 
