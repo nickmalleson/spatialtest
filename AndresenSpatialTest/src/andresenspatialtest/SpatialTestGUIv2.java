@@ -15,6 +15,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.BorderFactory;
@@ -284,11 +286,13 @@ public class SpatialTestGUIv2 extends JFrame {
 
             public void actionPerformed(ActionEvent e) {
                 if (e.getActionCommand().equals(SpatialTestGUIv2.this.areaMethodShapeString)) {
-                    // The shapefile option was selecte
+                    // The shapefile option was selected
                     SpatialTestGUIv2.this.consoleWriter.writeToConsole("Using a user-defined "
                             + "shapefile as the aggregation area", false);
                     SpatialTestGUIv2.this.gridSizeText.setVisible(false);
                     SpatialTestGUIv2.this.gridSizeLabel.setVisible(false);
+                    SpatialTestGUIv2.this.browseAreaFile.setVisible(true);
+                    SpatialTestGUIv2.this.areaDataText.setVisible(true);
 
                 }
                 else if (e.getActionCommand().equals(SpatialTestGUIv2.this.areaMethodGridString)) {
@@ -297,6 +301,8 @@ public class SpatialTestGUIv2 extends JFrame {
                             + "generated grids as the aggregation area.", false);
                     SpatialTestGUIv2.this.gridSizeText.setVisible(true);
                     SpatialTestGUIv2.this.gridSizeLabel.setVisible(true);
+                    SpatialTestGUIv2.this.browseAreaFile.setVisible(false);
+                    SpatialTestGUIv2.this.areaDataText.setVisible(false);
                 }
                 else { // error
                     String str = "Internal error: "
@@ -308,10 +314,50 @@ public class SpatialTestGUIv2 extends JFrame {
             }
 
         };
+        
 
         this.areaMethodShape.addActionListener(areaAL);
         this.areaMethodGrid.addActionListener(areaAL);
 
+        // Add action listeners to the text fields (put them in a map for
+
+        // Comment below is an elegent (?) way of creating the listeners that saves on repeated
+        // code (but doesn't work and looks a bit over-complicated. Would be nicer in Python).
+//        class TempTuple {
+//
+//            TempTuple(JTextField a, Integer b, String s) {
+//                this.textfield = a;
+//                this.theInt = b;
+//                this.theString = s;
+//            }
+//
+//            JTextField textfield;
+//            Integer theInt;
+//            String theString;
+//        }
+//
+//        for (TempTuple tup : Arrays.asList(new TempTuple[]{
+//                    new TempTuple(this.monteCarloText, this.monteCarlo, "number of iterations"),
+//                    new TempTuple(this.sampleSizePctText, this.sampleSizePct, "sample size"),
+//                    new TempTuple(this.confidenceIntervalText, this.confidenceInterval, "confidence interval"),
+//                    new TempTuple(this.gridSizeText, this.gridSize, "grid size")
+//                })) {
+//
+//            tup.textfield.getDocument().addDocumentListener(new NumberListener(
+//                    tup.textfield,
+//                    new SetMethod() {
+//
+//                        public void set(int i) {
+//                            tup.theInt = i;
+//                        }
+//
+//                        public String fieldName() {
+//                            return tup.theString;
+//                        }
+//
+//                    }));
+//
+//        }
 
 
         // Need listeners to listen for changes to the parameter text boxes
@@ -358,7 +404,7 @@ public class SpatialTestGUIv2 extends JFrame {
                 }));
 
         this.gridSizeText.getDocument().addDocumentListener(new NumberListener(
-                this.monteCarloText,
+                this.gridSizeText,
                 new SetMethod() {
 
                     public void set(int i) {
@@ -518,21 +564,47 @@ public class SpatialTestGUIv2 extends JFrame {
             return;
         }
 
-        if (this.baseFile == null || this.testFile == null
-                || this.areaFile == null || this.outputAreaFile == null) {
+        if (this.baseFile == null || this.testFile == null || this.outputAreaFile == null) {
             JOptionPane.showMessageDialog(this, "One of the input files has not been"
                     + " selected yet.");
+            return;
+        }
+
+        if (this.areaMethodShape.isSelected() && this.areaFile == null) {
+            JOptionPane.showMessageDialog(this, "Please select an area file to aggregate points to");
+            return;
+        }
+        else if (this.areaMethodGrid.isSelected() && this.gridSize < 1) {
+            JOptionPane.showMessageDialog(this, "The grid size must be greater than 0");
             return;
         }
 
         SpatialTestAlgv2 st = new SpatialTestAlgv2();
         st.setBaseShapefile(baseFile);
         st.setTestShapefile(testFile);
-        st.setAreaShapefile(areaFile);
         st.setOutputShapefile(outputAreaFile);
         st.setMonteCarlo(monteCarlo);
         st.setSamplePercentage(sampleSizePct);
         st.setConfidenceInterval(confidenceInterval);
+
+        // Tell the alg. whether to aggregate to a shapefile or a regular grid
+        if (this.areaMethodShape.isSelected()) {
+            st.setAreaShapefile(areaFile);
+            st.setUseGrid(false);
+        }
+        else if (this.areaMethodGrid.isSelected()) {
+            st.setAreaShapefile(null);
+            st.setUseGrid(true);
+            st.setGridSize(this.gridSize);
+        }
+        else {
+            String str = "Internal error. Both 'grid' and 'shape' area types are (un)selected: "
+                    + this.areaMethodGrid.isSelected() + "/" + this.areaMethodShape.isSelected();
+            this.consoleWriter.writeToConsole(str, true);
+            JOptionPane.showMessageDialog(this, str);
+            return;
+        }
+
 
         // Tell the algorithm to write to the GUI console, making the text red
         // if it represents an error
