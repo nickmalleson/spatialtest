@@ -13,13 +13,17 @@ each area.
 
 ## Installing / Running
 
-The software doesn't need to be installed first.
+The program requires Java version 1.7 or greater. (Older versions might work as well, but I've not
+tested them). The software doesn't need to be installed first.
 
 To run it:
 
  1. Download the [AndresenSpatialTest.zip](AndresenSpatialTest.zip) file.
- 2. Unzip the file
- 3. Run the program using the file 'run.bat'
+ 2. Unzip the file. This will create a directory called 'dist'.
+ 3. Run the program by executing the file 'AndresenSpatialTest.jar'. If that doesn't work, try the
+    command:
+
+        java -Xmx256M -jar AndresenSpatialTest.jar
 
 The download includes some shapefiles which can be used to test the program, they're in
 the 'data' directory.
