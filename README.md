@@ -18,9 +18,10 @@ tested them). The software doesn't need to be installed first.
 
 To run it:
 
- 1. Download the [AndresenSpatialTest.zip](AndresenSpatialTest.zip) file.
- 2. Unzip the file. This will create a directory called 'dist'.
- 3. Run the program by executing the file 'AndresenSpatialTest.jar'. If that doesn't work, try the
+ 1. Download the software (use [this linl](https://github.com/nickmalleson/spatialtest/archive/master.zip) or click on the 'Download ZIP' button on the right
+ 2. Unzip the file.
+ 2. Go into the directory called 'dist'.
+ 2. Run the program by executing the file 'AndresenSpatialTest.jar'. If that doesn't work, try the
     command:
 
         java -Xmx256M -jar AndresenSpatialTest.jar
