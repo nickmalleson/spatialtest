@@ -200,7 +200,8 @@ public class SpatialTestAlg {
         }
 
         /* For each area, rank the percentages in ascending order and remove outliers */
-        int numToRemove = (int) Math.round((this.monteCarlo * 0.05) / 2.0); // The number of samples to remove
+        // The number of samples to remove from the top and bottom
+        int numToRemove = (int) Math.round((this.monteCarlo * 0.05) / 2.0);
         output("Ranking percentages in ascending order and removing " + numToRemove + " outliers from top and bottom");
         for (Area a : this.areas) {
             // Sort the list of percentages
@@ -344,6 +345,12 @@ public class SpatialTestAlg {
             featureTypeBuilder.add("NumTstPts", Integer.class);
             featureTypeBuilder.add("PctBsePts", Double.class);
             featureTypeBuilder.add("PctTstPts", Double.class);
+            // Also interested in the confidence interval (i.e. the number and lower limits to the
+            // number and percentage of base points for this area to be statistically significantly diffferent
+            featureTypeBuilder.add("ConfIntLower", Integer.class); // Number
+            featureTypeBuilder.add("ConfIntUpper", Integer.class);
+            featureTypeBuilder.add("ConfIntLowerP", Double.class);
+            featureTypeBuilder.add("ConfIntUpperP", Double.class); // Percentage
 
             // Now create a feature builder to create the new features
             SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(featureTypeBuilder.buildFeatureType());
@@ -366,6 +373,12 @@ public class SpatialTestAlg {
                 newFeature.setAttribute("NumTstPts", a.absNumTestPoints);
                 newFeature.setAttribute("PctBsePts", a.percentageBasePoints);
                 newFeature.setAttribute("PctTstPts", a.absPercentageTestPoints);
+                
+                newFeature.setAttribute("ConfIntLower", -1); // -1 for now as I need to go back and remember the number of points
+                newFeature.setAttribute("ConfIntUpper", -1);
+                newFeature.setAttribute("ConfIntLowerP", a.pTestPoitsNoOutliers.get(0));
+                newFeature.setAttribute("ConfIntUpperP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
+                
                 outFeatures.add(newFeature);
             }
 //            }
