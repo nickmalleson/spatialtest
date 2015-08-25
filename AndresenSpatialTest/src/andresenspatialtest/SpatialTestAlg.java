@@ -404,10 +404,10 @@ public class SpatialTestAlg {
             
             // Also interested in the confidence interval (i.e. the number and lower limits to the
             // number and percentage of base points for this area to be statistically significantly diffferent
-            featureTypeBuilder.add("ConfIntLow", Integer.class); // Number
-            featureTypeBuilder.add("ConfIntUpp", Integer.class);
-            featureTypeBuilder.add("ConfIntLowP", Double.class); // Percentage
-            featureTypeBuilder.add("ConfIntUppP", Double.class); 
+            featureTypeBuilder.add("ConfLow", Integer.class); // Number
+            featureTypeBuilder.add("ConfUpp", Integer.class);
+            featureTypeBuilder.add("ConfLowP", Double.class); // Percentage
+            featureTypeBuilder.add("ConfUppP", Double.class); 
 
             // Now create a feature builder to create the new features
             SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(featureTypeBuilder.buildFeatureType());
@@ -430,10 +430,10 @@ public class SpatialTestAlg {
                 newFeature.setAttribute("PctTstPts", a.absPercentageTestPoints);
                 
                 // Also add the confidence intervals
-                newFeature.setAttribute("ConfIntLow", -1); // -1 for now as I need to go back and remember the number of points
-                newFeature.setAttribute("ConfIntUpp", -1);
-                newFeature.setAttribute("ConfIntLowP", a.pTestPoitsNoOutliers.get(0));
-                newFeature.setAttribute("ConfIntUppP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
+                newFeature.setAttribute("ConfLow", -1); // -1 for now as I need to go back and remember the number of points
+                newFeature.setAttribute("ConfUpp", -1);
+                newFeature.setAttribute("ConfLowP", a.pTestPoitsNoOutliers.get(0));
+                newFeature.setAttribute("ConfUppP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
                 
                 outFeatures.add(newFeature);
             }
@@ -502,10 +502,10 @@ public class SpatialTestAlg {
                     + "NumTstPts:Integer,"
                     + "PctBsePts:Double,"
                     + "PctTstPts:Double,"
-                    + "ConfIntLow:Integer"
-                    + "ConfIntUpp:Integer"
-                    + "ConfIntLowP:Double"
-                    + "ConfIntUppP:Double"
+                    + "ConfLow:Integer"
+                    + "ConfUpp:Integer"
+                    + "ConfLowP:Double"
+                    + "ConfUppP:Double"
             );
             
             SimpleFeatureCollection collection = FeatureCollections.newCollection();
@@ -526,10 +526,10 @@ public class SpatialTestAlg {
                 newFeature.setAttribute("PctBsePts", a.percentageBasePoints);
                 newFeature.setAttribute("PctTstPts", a.absPercentageTestPoints);
                 
-                newFeature.setAttribute("ConfIntLower", -1); // -1 for now as I need to go back and remember the number of points
-                newFeature.setAttribute("ConfIntUpper", -1);
-                newFeature.setAttribute("ConfIntLowP", a.pTestPoitsNoOutliers.get(0));
-                newFeature.setAttribute("ConfIntUppP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
+                newFeature.setAttribute("ConfLower", -1); // -1 for now as I need to go back and remember the number of points
+                newFeature.setAttribute("ConfUpper", -1);
+                newFeature.setAttribute("ConfLowP", a.pTestPoitsNoOutliers.get(0));
+                newFeature.setAttribute("ConfUppP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
                 
 
 

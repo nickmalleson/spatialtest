@@ -1,10 +1,6 @@
 # Andresen SpatialTest
 
-The spatial point pattern test was developed as part of [Martin
-Andresen](http://www.sfu.ca/%7Eandresen/)’s PhD Dissertation. The test measures
-the degree of similarity at the local level between two spatial point patterns
-and is an area-based test. The software has been written by [Nick
-Malleson](http://nickmalleson.co.uk/) in Java and has a graphical user interface
+The spatial point pattern test was developed as part of [Martin Andresen](http://www.sfu.ca/%7Eandresen/)’s PhD Dissertation. It has been published [here](http://jrc.sagepub.com/content/48/1/58) (and elsewhere). The test measures the degree of similarity at the local level between two spatial point patterns and is an area-based test. The software has been written by [Nick Malleson](http://nickmalleson.co.uk/) in Java and has a graphical user interface
 that can be used to run the test.
 
 The test takes two point shapefiles and an area shapefile, and estimates whether
