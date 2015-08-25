@@ -56,7 +56,7 @@ import org.opengis.feature.type.PropertyDescriptor;
  *
  * @author Nick Malleson
  */
-public class SpatialTestGUIv2 extends JFrame {
+public class SpatialTestGUI extends JFrame {
 
 //   private static final int GUI_WIDTH = 1024;
     private static final int GUI_WIDTH = 1200;
@@ -118,7 +118,7 @@ public class SpatialTestGUIv2 extends JFrame {
     private JLabel gridSizeLabel = new JLabel("Size of grid cells");
     private JButton runButton = new JButton("Run");
 
-    public SpatialTestGUIv2() {
+    public SpatialTestGUI() {
         initComponents();
     }
 
@@ -127,24 +127,24 @@ public class SpatialTestGUIv2 extends JFrame {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         }
         catch (ClassNotFoundException ex) {
-            Logger.getLogger(SpatialTestGUIv2.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SpatialTestGUI.class.getName()).log(Level.SEVERE, null, ex);
         }
         catch (InstantiationException ex) {
-            Logger.getLogger(SpatialTestGUIv2.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SpatialTestGUI.class.getName()).log(Level.SEVERE, null, ex);
         }
         catch (IllegalAccessException ex) {
-            Logger.getLogger(SpatialTestGUIv2.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SpatialTestGUI.class.getName()).log(Level.SEVERE, null, ex);
         }
         catch (UnsupportedLookAndFeelException ex) {
 
-            Logger.getLogger(SpatialTestGUIv2.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SpatialTestGUI.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         java.awt.EventQueue.invokeLater(new Runnable() {
 
             public void run() {
 
-                new SpatialTestGUIv2().setVisible(true);
+                new SpatialTestGUI().setVisible(true);
             }
 
         });
@@ -266,8 +266,8 @@ public class SpatialTestGUIv2 extends JFrame {
         radioPanel.add(this.areaMethodGrid);
 
         // And hide the grid size specification (turned off by default)
-        SpatialTestGUIv2.this.gridSizeText.setVisible(false);
-        SpatialTestGUIv2.this.gridSizeLabel.setVisible(false);
+        SpatialTestGUI.this.gridSizeText.setVisible(false);
+        SpatialTestGUI.this.gridSizeLabel.setVisible(false);
 
         this.paramsTaskGroup.add(this.monteCarloLabel);
         this.paramsTaskGroup.add(this.monteCarloText);
@@ -285,31 +285,31 @@ public class SpatialTestGUIv2 extends JFrame {
         ActionListener areaAL = new ActionListener() {
 
             public void actionPerformed(ActionEvent e) {
-                if (e.getActionCommand().equals(SpatialTestGUIv2.this.areaMethodShapeString)) {
+                if (e.getActionCommand().equals(SpatialTestGUI.this.areaMethodShapeString)) {
                     // The shapefile option was selected
-                    SpatialTestGUIv2.this.consoleWriter.writeToConsole("Using a user-defined "
+                    SpatialTestGUI.this.consoleWriter.writeToConsole("Using a user-defined "
                             + "shapefile as the aggregation area", false);
-                    SpatialTestGUIv2.this.gridSizeText.setVisible(false);
-                    SpatialTestGUIv2.this.gridSizeLabel.setVisible(false);
-                    SpatialTestGUIv2.this.browseAreaFile.setVisible(true);
-                    SpatialTestGUIv2.this.areaDataText.setVisible(true);
+                    SpatialTestGUI.this.gridSizeText.setVisible(false);
+                    SpatialTestGUI.this.gridSizeLabel.setVisible(false);
+                    SpatialTestGUI.this.browseAreaFile.setVisible(true);
+                    SpatialTestGUI.this.areaDataText.setVisible(true);
 
                 }
-                else if (e.getActionCommand().equals(SpatialTestGUIv2.this.areaMethodGridString)) {
+                else if (e.getActionCommand().equals(SpatialTestGUI.this.areaMethodGridString)) {
                     // The grid option was selected
-                    SpatialTestGUIv2.this.consoleWriter.writeToConsole("Using automatically "
+                    SpatialTestGUI.this.consoleWriter.writeToConsole("Using automatically "
                             + "generated grids as the aggregation area.", false);
-                    SpatialTestGUIv2.this.gridSizeText.setVisible(true);
-                    SpatialTestGUIv2.this.gridSizeLabel.setVisible(true);
-                    SpatialTestGUIv2.this.browseAreaFile.setVisible(false);
-                    SpatialTestGUIv2.this.areaDataText.setVisible(false);
+                    SpatialTestGUI.this.gridSizeText.setVisible(true);
+                    SpatialTestGUI.this.gridSizeLabel.setVisible(true);
+                    SpatialTestGUI.this.browseAreaFile.setVisible(false);
+                    SpatialTestGUI.this.areaDataText.setVisible(false);
                 }
                 else { // error
                     String str = "Internal error: "
                             + "unrecognised action event received by area type action listener: "
                             + e.getActionCommand();
-                    SpatialTestGUIv2.this.consoleWriter.writeToConsole(str, true);
-                    JOptionPane.showMessageDialog(SpatialTestGUIv2.this, str);
+                    SpatialTestGUI.this.consoleWriter.writeToConsole(str, true);
+                    JOptionPane.showMessageDialog(SpatialTestGUI.this, str);
                 }
             }
 
@@ -366,7 +366,7 @@ public class SpatialTestGUIv2 extends JFrame {
                 new SetMethod() {
 
                     public void set(int i) {
-                        SpatialTestGUIv2.this.monteCarlo = i;
+                        SpatialTestGUI.this.monteCarlo = i;
                     }
 
                     public String fieldName() {
@@ -380,7 +380,7 @@ public class SpatialTestGUIv2 extends JFrame {
                 new SetMethod() {
 
                     public void set(int i) {
-                        SpatialTestGUIv2.this.sampleSizePct = i;
+                        SpatialTestGUI.this.sampleSizePct = i;
                     }
 
                     public String fieldName() {
@@ -394,7 +394,7 @@ public class SpatialTestGUIv2 extends JFrame {
                 new SetMethod() {
 
                     public void set(int i) {
-                        SpatialTestGUIv2.this.confidenceInterval = i;
+                        SpatialTestGUI.this.confidenceInterval = i;
                     }
 
                     public String fieldName() {
@@ -408,7 +408,7 @@ public class SpatialTestGUIv2 extends JFrame {
                 new SetMethod() {
 
                     public void set(int i) {
-                        SpatialTestGUIv2.this.gridSize = i;
+                        SpatialTestGUI.this.gridSize = i;
                     }
 
                     public String fieldName() {
@@ -424,7 +424,7 @@ public class SpatialTestGUIv2 extends JFrame {
         this.runButton.addActionListener(new ActionListener() {
 
             public void actionPerformed(ActionEvent e) {
-                SpatialTestGUIv2.this.runModel();
+                SpatialTestGUI.this.runModel();
             }
 
         });
@@ -494,7 +494,7 @@ public class SpatialTestGUIv2 extends JFrame {
 
         }
         catch (IOException ex) {
-            SpatialTestGUIv2.this.consoleWriter.writeToConsole("Could not display the "
+            SpatialTestGUI.this.consoleWriter.writeToConsole("Could not display the "
                     + "file '" + f.getAbsolutePath() + "' due to an IOException: "
                     + ex.getMessage(), true);
             return;
@@ -504,7 +504,7 @@ public class SpatialTestGUIv2 extends JFrame {
         boolean containsColumn = false;
         FeatureType type = featureSource.getSchema();
         for (PropertyDescriptor desc : type.getDescriptors()) {
-            if (desc.getName().getLocalPart().equals(SpatialTestAlgv2.getSIndexColumnName())) {
+            if (desc.getName().getLocalPart().equals(SpatialTestAlg.getSIndexColumnName())) {
                 containsColumn = true;
                 break;
             }
@@ -515,7 +515,7 @@ public class SpatialTestGUIv2 extends JFrame {
             if (containsColumn) {
                 // Passing the featureSource tells the MapWindow that it should colour
                 // the map according to the value of the "SIndex" column.
-                MapWindow.createDefaultStyle(featureSource, SpatialTestAlgv2.getSIndexColumnName());
+                MapWindow.createDefaultStyle(featureSource, SpatialTestAlg.getSIndexColumnName());
             }
             else {
                 MapWindow.createDefaultStyle(featureSource, null);
@@ -579,7 +579,7 @@ public class SpatialTestGUIv2 extends JFrame {
             return;
         }
 
-        SpatialTestAlgv2 st = new SpatialTestAlgv2();
+        SpatialTestAlg st = new SpatialTestAlg();
         st.setBaseShapefile(baseFile);
         st.setTestShapefile(testFile);
         st.setOutputShapefile(outputAreaFile);
@@ -636,7 +636,7 @@ public class SpatialTestGUIv2 extends JFrame {
     public void algFinished(ModelRunner mr) {
 
         boolean success = mr.isSuccess();
-        SpatialTestAlgv2 alg = mr.getAlg();
+        SpatialTestAlg alg = mr.getAlg();
 
         if (success) {
             JOptionPane.showMessageDialog(this, "All finished successfully.\n"
@@ -657,16 +657,16 @@ public class SpatialTestGUIv2 extends JFrame {
     class BrowseButtonActionListener implements ActionListener {
 
         public void actionPerformed(ActionEvent e) {
-            SpatialTestGUIv2.this.createFileChooser(); // Create the file chooser (if it is null)
+            SpatialTestGUI.this.createFileChooser(); // Create the file chooser (if it is null)
             // Choose the file
-            SpatialTestGUIv2.this.chooser.setDialogTitle("Choose a shapefile");
+            SpatialTestGUI.this.chooser.setDialogTitle("Choose a shapefile");
             int returnVal = 0;
             // Need to check whether to show the 'browse' or 'save' dialogue (for the results file)
-            if (e.getSource().equals(SpatialTestGUIv2.this.browseOutputFile)) {
-                returnVal = chooser.showSaveDialog(SpatialTestGUIv2.this);
+            if (e.getSource().equals(SpatialTestGUI.this.browseOutputFile)) {
+                returnVal = chooser.showSaveDialog(SpatialTestGUI.this);
             }
             else {
-                returnVal = chooser.showOpenDialog(SpatialTestGUIv2.this);
+                returnVal = chooser.showOpenDialog(SpatialTestGUI.this);
             }
 
             // Check a file was selected
@@ -674,25 +674,25 @@ public class SpatialTestGUIv2 extends JFrame {
                 File f = chooser.getSelectedFile();
 
                 // Work out which button was pressed so the appropriate file can be set
-                if (e.getSource().equals(SpatialTestGUIv2.this.browseBaseFile)) {
-                    SpatialTestGUIv2.this.baseFile = f;
-                    SpatialTestGUIv2.this.baseDataText.setText(f.getName());
-                    SpatialTestGUIv2.this.baseDataText.setBackground(Color.GREEN);
-                    SpatialTestGUIv2.this.consoleWriter.writeToConsole("Selected base file: " + f.getName(), false);
+                if (e.getSource().equals(SpatialTestGUI.this.browseBaseFile)) {
+                    SpatialTestGUI.this.baseFile = f;
+                    SpatialTestGUI.this.baseDataText.setText(f.getName());
+                    SpatialTestGUI.this.baseDataText.setBackground(Color.GREEN);
+                    SpatialTestGUI.this.consoleWriter.writeToConsole("Selected base file: " + f.getName(), false);
                 }
-                else if (e.getSource().equals(SpatialTestGUIv2.this.browseTestFile)) {
-                    SpatialTestGUIv2.this.testFile = f;
-                    SpatialTestGUIv2.this.testDataText.setText(f.getName());
-                    SpatialTestGUIv2.this.testDataText.setBackground(Color.GREEN);
-                    SpatialTestGUIv2.this.consoleWriter.writeToConsole("Selected test file: " + f.getName(), false);
+                else if (e.getSource().equals(SpatialTestGUI.this.browseTestFile)) {
+                    SpatialTestGUI.this.testFile = f;
+                    SpatialTestGUI.this.testDataText.setText(f.getName());
+                    SpatialTestGUI.this.testDataText.setBackground(Color.GREEN);
+                    SpatialTestGUI.this.consoleWriter.writeToConsole("Selected test file: " + f.getName(), false);
                 }
-                else if (e.getSource().equals(SpatialTestGUIv2.this.browseAreaFile)) {
-                    SpatialTestGUIv2.this.areaFile = f;
-                    SpatialTestGUIv2.this.areaDataText.setText(f.getName());
-                    SpatialTestGUIv2.this.areaDataText.setBackground(Color.GREEN);
-                    SpatialTestGUIv2.this.consoleWriter.writeToConsole("Selected area file: " + f.getName(), false);
+                else if (e.getSource().equals(SpatialTestGUI.this.browseAreaFile)) {
+                    SpatialTestGUI.this.areaFile = f;
+                    SpatialTestGUI.this.areaDataText.setText(f.getName());
+                    SpatialTestGUI.this.areaDataText.setBackground(Color.GREEN);
+                    SpatialTestGUI.this.consoleWriter.writeToConsole("Selected area file: " + f.getName(), false);
                 }
-                else if (e.getSource().equals(SpatialTestGUIv2.this.browseOutputFile)) {
+                else if (e.getSource().equals(SpatialTestGUI.this.browseOutputFile)) {
                     // For the output file, need to make sure it ends in ".shp"
                     String name = f.getName();
                     // See if the file ends in .shp (or is less than 5 characters long, in which case it
@@ -700,10 +700,10 @@ public class SpatialTestGUIv2 extends JFrame {
                     if (!name.endsWith(".shp")) {
                         f = new File(f.getAbsolutePath() + ".shp");
                     }
-                    SpatialTestGUIv2.this.outputAreaFile = f;
-                    SpatialTestGUIv2.this.outputDataText.setText(name);
-                    SpatialTestGUIv2.this.outputDataText.setBackground(Color.GREEN);
-                    SpatialTestGUIv2.this.consoleWriter.writeToConsole("Selected output file: " + f.getName(), false);
+                    SpatialTestGUI.this.outputAreaFile = f;
+                    SpatialTestGUI.this.outputDataText.setText(name);
+                    SpatialTestGUI.this.outputDataText.setBackground(Color.GREEN);
+                    SpatialTestGUI.this.consoleWriter.writeToConsole("Selected output file: " + f.getName(), false);
 
 
                 }
@@ -712,8 +712,8 @@ public class SpatialTestGUIv2 extends JFrame {
                 }
 
                 // Add the data to the map (unless it's the output file, this won't have been created yet
-                if (!e.getSource().equals(SpatialTestGUIv2.this.browseOutputFile)) {
-                    SpatialTestGUIv2.this.displayShapefile(f);
+                if (!e.getSource().equals(SpatialTestGUI.this.browseOutputFile)) {
+                    SpatialTestGUI.this.displayShapefile(f);
                 }
 
             } // if returnVal is OK
@@ -728,25 +728,25 @@ public class SpatialTestGUIv2 extends JFrame {
 
         public void writeToConsole(String text, boolean error) {
             if (error) {
-                SpatialTestGUIv2.this.console.setForeground(Color.RED);
-                SpatialTestGUIv2.this.console.append(text + "\n");
-                SpatialTestGUIv2.this.console.setForeground(Color.GREEN);
+                SpatialTestGUI.this.console.setForeground(Color.RED);
+                SpatialTestGUI.this.console.append(text + "\n");
+                SpatialTestGUI.this.console.setForeground(Color.GREEN);
                 System.err.println(text);
             }
             else {
-                SpatialTestGUIv2.this.console.append(text + "\n");
+                SpatialTestGUI.this.console.append(text + "\n");
                 System.out.println(text);
             }
-            SpatialTestGUIv2.this.console.setCaretPosition(
-                    SpatialTestGUIv2.this.console.getDocument().getLength());
+            SpatialTestGUI.this.console.setCaretPosition(
+                    SpatialTestGUI.this.console.getDocument().getLength());
         }
 
         public void writeToConsole(StackTraceElement[] stackTrace) {
-            SpatialTestGUIv2.this.console.setForeground(Color.RED);
+            SpatialTestGUI.this.console.setForeground(Color.RED);
             for (StackTraceElement e : stackTrace) {
-                SpatialTestGUIv2.this.console.append(e.toString() + "\n");
+                SpatialTestGUI.this.console.append(e.toString() + "\n");
             }
-            SpatialTestGUIv2.this.console.setForeground(Color.GREEN);
+            SpatialTestGUI.this.console.setForeground(Color.GREEN);
         }
 
     }
@@ -796,18 +796,18 @@ public class SpatialTestGUIv2 extends JFrame {
                 }
                 tf.setBackground(Color.GREEN);
                 setMethod.set(i);
-                SpatialTestGUIv2.this.consoleWriter.writeToConsole("Have set " + setMethod.fieldName()
+                SpatialTestGUI.this.consoleWriter.writeToConsole("Have set " + setMethod.fieldName()
                         + " to: " + tf.getText(), false);
 
             }
             catch (NumberFormatException ex) {
-                SpatialTestGUIv2.this.consoleWriter.writeToConsole(setMethod.fieldName()
+                SpatialTestGUI.this.consoleWriter.writeToConsole(setMethod.fieldName()
                         + " must be an integer, not: " + tf.getText(), false);
                 tf.setBackground(Color.RED);
                 setMethod.set(-1); // Set to -1 so that we know the value is invalid
             }
             catch (Exception ex) {
-                SpatialTestGUIv2.this.consoleWriter.writeToConsole(setMethod.fieldName()
+                SpatialTestGUI.this.consoleWriter.writeToConsole(setMethod.fieldName()
                         + " must be greater than 0: " + tf.getText(), false);
                 tf.setBackground(Color.RED);
                 setMethod.set(-1); // Set to -1 so that we know the value is invalid
@@ -832,11 +832,11 @@ public class SpatialTestGUIv2 extends JFrame {
 
     class ModelRunner extends Thread {
 
-        private SpatialTestAlgv2 st;
-        private SpatialTestGUIv2 gui;
+        private SpatialTestAlg st;
+        private SpatialTestGUI gui;
         private boolean success;
 
-        public ModelRunner(SpatialTestAlgv2 st, SpatialTestGUIv2 gui) {
+        public ModelRunner(SpatialTestAlg st, SpatialTestGUI gui) {
             this.st = st;
             this.gui = gui;
             success = false;
@@ -857,7 +857,7 @@ public class SpatialTestGUIv2 extends JFrame {
          * The GUI needs a way to find the algorithm object again
          * @return
          */
-        public SpatialTestAlgv2 getAlg() {
+        public SpatialTestAlg getAlg() {
             return this.st;
         }
 

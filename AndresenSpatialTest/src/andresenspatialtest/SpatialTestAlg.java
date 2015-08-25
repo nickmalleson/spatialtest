@@ -66,7 +66,7 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
  *
  * @author Nick Malleson
  */
-public class SpatialTestAlgv2 {
+public class SpatialTestAlg {
 
     /** ****** Global variables ****** */
     // Files for reading input and writing output
@@ -99,7 +99,7 @@ public class SpatialTestAlgv2 {
     /**
      * Create a SpatialTestAlg object.
      */
-    public SpatialTestAlgv2() {
+    public SpatialTestAlg() {
         this.areas = new ArrayList<Area>();
     }
 
@@ -137,14 +137,14 @@ public class SpatialTestAlgv2 {
             List<Geometry> temp = new ArrayList<Geometry>();
             temp.addAll(this.baseGeometries);
             temp.addAll(this.testGeometries);
-            this.areas = SpatialTestAlgv2.createRegularGrid(this.gridSize, temp);
+            this.areas = SpatialTestAlg.createRegularGrid(this.gridSize, temp);
             // Need to set the Area.featureType so the areas can be converted to proper polygons
             // later (this is done automatically by readShapefile)
             SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
             builder.setName("OutGrids"); // ?
             // The crs should have been set in readShapefile(), but if the input data don't
             // have an associated projection it will be null; so use WGS84
-            builder.setCRS(SpatialTestAlgv2.crs == null ? DefaultGeographicCRS.WGS84 : SpatialTestAlgv2.crs);
+            builder.setCRS(SpatialTestAlg.crs == null ? DefaultGeographicCRS.WGS84 : SpatialTestAlg.crs);
 
 //             add attributes in order
 //            builder.add("Location", Point.class);
@@ -306,7 +306,7 @@ public class SpatialTestAlgv2 {
 
             FeatureSource<SimpleFeatureType, SimpleFeature> featureSource = dataStore.getFeatureSource(typeName);
             // Remember the CRS, useful for building output features
-            SpatialTestAlgv2.crs = featureSource.getInfo().getCRS();
+            SpatialTestAlg.crs = featureSource.getInfo().getCRS();
             if (writeFeatureSource) {
 //                Area.featureSource = featureSource;
                 Area.featureType = featureSource.getFeatures().iterator().next().getFeatureType();
@@ -490,9 +490,9 @@ public class SpatialTestAlgv2 {
             checkFile(areaShapefile); // See if file needs to be deleted
 
             // Work out the CRS ID (either from a previous shapefile or useing WGS84 as default)
-            int srid = SpatialTestAlgv2.crs==null ?
+            int srid = SpatialTestAlg.crs==null ?
                 CRS.lookupEpsgCode(DefaultGeographicCRS.WGS84, true) :
-                CRS.lookupEpsgCode(SpatialTestAlgv2.crs, true);
+                CRS.lookupEpsgCode(SpatialTestAlg.crs, true);
             // Need to describe data manually because no shapefile existing features to use as a definition.
             final SimpleFeatureType TYPE = DataUtilities.createType("Location",
                     //                    "location:Point:srid=4326," + // <- the geometry attribute: Point type
@@ -517,7 +517,7 @@ public class SpatialTestAlgv2 {
             FeatureCollection<SimpleFeatureType, SimpleFeature> outFeatures = FeatureCollections.newCollection();
             for (Area a : areas2) {
                 SimpleFeature newFeature;
-                newFeature = featureBuilder.buildFeature(String.valueOf(SpatialTestAlgv2.gridIDs++));
+                newFeature = featureBuilder.buildFeature(String.valueOf(SpatialTestAlg.gridIDs++));
 
                 newFeature.setDefaultGeometry(a.geometry);
                 newFeature.setAttribute(SIndexColumnName, a.sVal);
@@ -749,7 +749,7 @@ public class SpatialTestAlgv2 {
      * output shapefile
      */
     public static String getSIndexColumnName() {
-        return SpatialTestAlgv2.SIndexColumnName;
+        return SpatialTestAlg.SIndexColumnName;
     }
 
     /**
