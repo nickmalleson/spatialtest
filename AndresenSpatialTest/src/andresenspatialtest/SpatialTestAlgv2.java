@@ -401,6 +401,13 @@ public class SpatialTestAlgv2 {
             featureTypeBuilder.add("NumTstPts", Integer.class);
             featureTypeBuilder.add("PctBsePts", Double.class);
             featureTypeBuilder.add("PctTstPts", Double.class);
+            
+            // Also interested in the confidence interval (i.e. the number and lower limits to the
+            // number and percentage of base points for this area to be statistically significantly diffferent
+            featureTypeBuilder.add("ConfIntLower", Integer.class); // Number
+            featureTypeBuilder.add("ConfIntUpper", Integer.class);
+            featureTypeBuilder.add("ConfIntLowerP", Double.class); // Percentage
+            featureTypeBuilder.add("ConfIntUpperP", Double.class); 
 
             // Now create a feature builder to create the new features
             SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(featureTypeBuilder.buildFeatureType());
@@ -421,6 +428,13 @@ public class SpatialTestAlgv2 {
                 newFeature.setAttribute("NumTstPts", a.absNumTestPoints);
                 newFeature.setAttribute("PctBsePts", a.percentageBasePoints);
                 newFeature.setAttribute("PctTstPts", a.absPercentageTestPoints);
+                
+                                
+                newFeature.setAttribute("ConfIntLower", -1); // -1 for now as I need to go back and remember the number of points
+                newFeature.setAttribute("ConfIntUpper", -1);
+                newFeature.setAttribute("ConfIntLowerP", a.pTestPoitsNoOutliers.get(0));
+                newFeature.setAttribute("ConfIntUpperP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
+                
                 outFeatures.add(newFeature);
             }
 //            }
@@ -487,7 +501,12 @@ public class SpatialTestAlgv2 {
                     + "NumBsePts:Integer,"
                     + "NumTstPts:Integer,"
                     + "PctBsePts:Double,"
-                    + "PctTstPts:Double,");
+                    + "PctTstPts:Double,"
+                    + "ConfIntLower:Integer"
+                    + "ConfIntUpper:Integer"
+                    + "ConfIntLowerP:Double"
+                    + "ConfIntUpperP:Double"
+            );
             
             SimpleFeatureCollection collection = FeatureCollections.newCollection();
 
@@ -506,6 +525,12 @@ public class SpatialTestAlgv2 {
                 newFeature.setAttribute("NumTstPts", a.absNumTestPoints);
                 newFeature.setAttribute("PctBsePts", a.percentageBasePoints);
                 newFeature.setAttribute("PctTstPts", a.absPercentageTestPoints);
+                
+                newFeature.setAttribute("ConfIntLower", -1); // -1 for now as I need to go back and remember the number of points
+                newFeature.setAttribute("ConfIntUpper", -1);
+                newFeature.setAttribute("ConfIntLowerP", a.pTestPoitsNoOutliers.get(0));
+                newFeature.setAttribute("ConfIntUpperP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
+                
 
 
                 outFeatures.add(newFeature);
