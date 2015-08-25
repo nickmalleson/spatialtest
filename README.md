@@ -48,7 +48,7 @@ It also has information about the number of points in each are:
   
 It also (as of version 1.1) includes a confidence interval - i.e. the upper and lower limits outside which the test dataset will be considered significantly different. These are presented both as absolutely number of points and percentages.
 
-  - **ConfIntLower**: The lower end of the confidence interval (number of points)
-  - **ConfIntUpper**: The upper end of the confidence interval (number of points)
-  - **ConfIntLowerP**: The lower end of the confidence interval (percentage of points)
-  - **ConfIntUpperP**: The upper end of the confidence interval (percentage of points)
+  - **ConfLow**: The lower end of the confidence interval (number of points)
+  - **ConfUpp**: The upper end of the confidence interval (number of points)
+  - **ConfLowP**: The lower end of the confidence interval (percentage of points)
+  - **ConfUppP**: The upper end of the confidence interval (percentage of points)
