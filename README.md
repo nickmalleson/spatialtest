@@ -9,7 +9,7 @@ each area.
 
 ## Installing / Running
 
-The program requires Java version 1.7 or greater. (Older versions might work as well, but I've not tested them). The software doesn't need to be installed first.
+The program requires Java version 1.7 or greater. (Older versions might work as well, but I've not tested them). 
 
 To run it:
 
