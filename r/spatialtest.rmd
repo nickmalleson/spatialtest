@@ -1,0 +1,95 @@
+---
+title: "Andresen Spatial Test"
+author: "Nick Malleson"
+date: '`r format(Sys.time(), "%d %B, %Y (%H:%M)")`'
+output:
+  html_document: 
+    toc: yes
+    pandoc_args: [
+      "+RTS", "-K64m",
+      "-RTS"
+    ]
+  pdf_document:
+    fig_crop: no
+    highlight: kate
+    keep_tex: yes
+    latex_engine: xelatex
+    number_sections: yes
+fontsize: 10pt
+---
+
+```{r initialise, echo=FALSE, message=FALSE, warning=FALSE}
+setwd('~/research_not_syncd/git_projects/spatialtest/r/')
+
+library(GISTools)
+library(rgeos)    # For things like gIntersects
+library(rgdal)    # For reading shapefiles
+#library(plyr)     # For counting and aggregating
+#library(tmap)     # For thematic maps
+#library(classInt) # Jenks natural breaks
+#library(png)      # For loading pngs after they have been written
+#library(grid)     # so that they can be embedded in knitted documents
+#library(spdep)    # For doing the spatial regression, contiguity matrices, etc.
+#library(GWmodel)  # For geographically weighted regression (GWR)
+#library(MASS)     # For stepwise regression (stepAIC())
+#library(pander)   # For printing tables nicely
+#library(MVN)      # For testing for multivariate normality (MVN)
+
+```
+
+# Andresen Spatial Test - R Implementation
+
+## Background
+
+This is a working document that I am using to develop the Spatial Test in R. Ultimately it will become a self contained function / package.
+
+The test works as follows: (from Andresen and Malleson, 2011)
+
+ 1. Nominate a base data set (e.g., 1991 assaults) and count, for each area, the number of points that fall within it.
+ 
+ 2. From the test data set (e.g., 1996 assaults), randomly sample 85 percent of the points, with replacement. As with the previous step, count the number of points within each area using the sample. This is effectively a bootstrap created by sampling from the test data set.
+ 
+ 3. Repeat (2) a number of times (200 is used here).
+ 
+ 4. For each area in the test data set, calculate the percentage of crime that has occurred in the area. Use these percentages to generate a 95 percent nonparametric confidence interval by removing the top and bottom 2.5 percent of all counts (5 from the top and 5 from the bottom in this case). The minimum and maximum of the remaining percentages represent the confidence interval. It should be noted that the effect of the sampling procedure will be to reduce the number of observations in the test data set but, using percentages rather than the absolute counts, comparisons between data sets can be made even if the total number of observations are different.
+ 
+ 5. Calculate the percentage of points within each area for the base data set and compare this to the confidence interval generated from the test data set. If the base percentage falls within the confidence interval, then the two data sets exhibit a similar proportion of points in the given area. Otherwise they are significantly different.
+ 
+
+## Read Data
+
+Start by reading some data.
+
+```{r readData, message=FALSE }
+
+# Read some data
+areas <- readOGR(ds = "./data/", layer="areas")
+base.data <- readOGR(ds = "./data/", layer="points1")
+test.data <- readOGR(ds = "./data/", layer="points2")
+plot(areas)
+plot(base.data, col="blue",add=T)
+plot(test.data, col="red",add=T)
+```
+
+## Run Administrative Test
+
+Run the test by aggregating points to administrative areas. The code does the following:
+
+ 1. Count the number of base and test features in each area.
+ 2. Run the Monte-Carlo simulation (sample points and count the number in each area)
+ 2. For each area, calculate the percentage of points in it at every Monte-Carlo iteration
+ 2. Rank the areas by the percentages in ascending order and remove outliers
+ 2. Calculate the S-index for each area
+ 2. Calculate global S value
+ 2. Return results
+
+
+```{r runTest}
+
+
+
+```
+
+## Validate the test
+
+TODO: run on some real data for Vancouver and Leeds, and check that the results are consistent with previous results calculated using the Java version of the test, or manually (e.g. in Excel)
