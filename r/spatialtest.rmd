@@ -39,6 +39,14 @@ library(rgdal)    # For reading shapefiles
 
 # Andresen Spatial Test - R Implementation
 
+## TODO
+
+ - Implement the longitudinal version
+ 
+ - Include option to build a regular grid around the points
+ 
+ - Implement the 'expanding cell' version (lots of regular grids of different sizes and error measures at different scales)
+
 ## Background
 
 This is a working document that I am using to develop the Spatial Test in R. Ultimately it will become a self contained function / package.
@@ -57,10 +65,18 @@ The test works as follows: (from Andresen and Malleson, 2011)
  
 ## Configuration
 
-Configure the script here.
+Configure the script here. (Un)comment or edit lines as appropriate to change the data used and the parameters for the test.
 
 ```{r config}
-datasource <- "./data/" # THe folder with the shapefiles
+# For the basic test:
+datasource <- "..data/basic_test/" # The folder with the shapefiles
+
+# Some Leeds data:
+XXXX
+
+# Some Vancouver data:
+#XXXX
+
 base.layer <- "points1" # THe name of the base dataset
 test.layer <- "points2" # THe name of the test dataset
 areas.layer <- "areas"  # The polygon boundary file
@@ -76,9 +92,13 @@ Start by reading some data.
 ```{r readData, message=FALSE }
 
 # Read some data
+
+# For the really basic test:
 areas <- readOGR(ds = datasource, layer=areas.layer)
 base.data <- readOGR(ds = datasource, layer=base.layer)
 test.data <- readOGR(ds = datasource, layer=test.layer)
+
+
 plot(areas)
 plot(base.data, col="blue",add=T)
 plot(test.data, col="red",add=T)
