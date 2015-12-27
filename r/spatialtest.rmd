@@ -22,7 +22,7 @@ fontsize: 10pt
 setwd('~/research_not_syncd/git_projects/spatialtest/r/')
 
 library(GISTools)
-library(rgeos)    # For things like gIntersects
+#library(rgeos)    # For things like gIntersects
 library(rgdal)    # For reading shapefiles
 #library(plyr)     # For counting and aggregating
 #library(tmap)     # For thematic maps
@@ -55,6 +55,19 @@ The test works as follows: (from Andresen and Malleson, 2011)
  
  5. Calculate the percentage of points within each area for the base data set and compare this to the confidence interval generated from the test data set. If the base percentage falls within the confidence interval, then the two data sets exhibit a similar proportion of points in the given area. Otherwise they are significantly different.
  
+## Configuration
+
+Configure the script here.
+
+```{r config}
+datasource <- "./data/" # THe folder with the shapefiles
+base.layer <- "points1" # THe name of the base dataset
+test.layer <- "points2" # THe name of the test dataset
+areas.layer <- "areas"  # The polygon boundary file
+
+N <- 100 # The number of iterations in the monte carlo simulation
+```
+ 
 
 ## Read Data
 
@@ -63,12 +76,13 @@ Start by reading some data.
 ```{r readData, message=FALSE }
 
 # Read some data
-areas <- readOGR(ds = "./data/", layer="areas")
-base.data <- readOGR(ds = "./data/", layer="points1")
-test.data <- readOGR(ds = "./data/", layer="points2")
+areas <- readOGR(ds = datasource, layer=areas.layer)
+base.data <- readOGR(ds = datasource, layer=base.layer)
+test.data <- readOGR(ds = datasource, layer=test.layer)
 plot(areas)
 plot(base.data, col="blue",add=T)
 plot(test.data, col="red",add=T)
+
 ```
 
 ## Run Administrative Test
@@ -82,10 +96,128 @@ Run the test by aggregating points to administrative areas. The code does the fo
  2. Calculate the S-index for each area
  2. Calculate global S value
  2. Return results
+ 
+_Note_: This R implementation was originally provided by Shane Johnson - thanks!!
 
+### Aggregate points.
 
+```{r aggregate}
+# Count the number of base and test features in each area
+areas$base <- poly.counts(base.data, areas)
+areas$test <- poly.counts(test.data,areas)
+
+# Check that all of the crimes are within an area
+if ( sum(areas$base) != length(base.data) ) {
+  warning(paste("There are", length(base.data)-sum(areas$base), 
+                "crimes in the base data are not within an administrative area"))
+}
+if ( sum(areas$test) != length(test.data) ) {
+  warning(paste("There are", length(test.data)-sum(areas$test), 
+                "crimes in the test data are not within an administrative area"))
+}
+
+```
+
+### Run the test 
+  
 ```{r runTest}
 
+  len <- length(areas) # The number of areas
+  tot <- sum(areas$base)    # The number of crimes
+  
+  # An array to store the results of each monte carlo iteration temporarily.
+  # This is in long form (one row per crime). Dim 1=i, 2=sampled data (temp)
+  result <- array(0,c(2,tot))
+  
+  # Generate the long form of the data for sampling - one row per crime
+  # (actually it's one crime per colum technically, but that doesn't really matter)
+  ct <- 0 # counter
+  for (i in 1:len) {
+    start <- ct + 1
+    end <- start + areas$base[i] - 1 # Number of crimes in area i
+    result[1,c(start:end)] <- i
+    ct <- end
+  }
+  
+  # Now run the Monte-Carlo simulation
+  
+  # Store the results of each iteration in the monte.carlo array.
+  # N columns are for the simulations for each run, remaining three columns are for the mean
+  # of all runs and the upper and lower confidence intervals.
+  monte.carlo <- array(0,c((N + 3),len))
+  for (i in 1:N) { # (Could do this bit multi-process)
+    #resample (NOT SURE HOW THIS WORKS!!)
+    mc <- trunc(runif(tot,min = 1,max = (tot + 1))) # Create a random number for each row
+    result[2,(1:tot)] <- result[1,mc[1:tot]] # Store sampled data in result[2,] temporarily
+    for (j in 1:len) {
+      monte.carlo[i,j] <- sum(result[2,] == j) #compute reaggregate to areas
+    }
+  }
+  
+  # Calculate the mean and confidence intervals for each area after the simulations
+  temp <- rep(0,N)
+  for (i in 1:len) {
+    monte.carlo[(N + 1),i] <- mean(monte.carlo[c(1:N),i])
+    temp[] <- sort(monte.carlo[c(1:N),i])
+    monte.carlo[(N + 2),i] <- temp[0.95 * N] #upper
+    monte.carlo[(N + 3),i] <- temp[0.05 * N] #lower
+  }
+  
+  # Compute the S Index, in this case comparing the values from year to the next for each area
+  # Do this by adding up the number of times that the test data point is within the upper and lower bounds
+  # of the base data
+  S <-  sum(
+    (areas$test >= monte.carlo[(N + 3),]) & (areas$test <= monte.carlo[(N + 2),])
+    ) / len 
+  
+  # Calculate excluding zero entries
+  # Same as above but also include the condition that there has to be a crime in the test data set
+  # as well as being within bounds.
+  S.nozero <- sum(
+    (areas$test >= monte.carlo[N + 3,]) & (areas$test <= monte.carlo[N + 2,]) & (areas$test > 0)
+    ) / len 
+  
+  print(paste("S index: ",S, ". Excluding zeros: ",S.nozero))
+  
+  # Store results ready to be returned when this is implemented as a function
+  areas@data$S = S # The s index, will be the same for each area (it is global)
+  areas@data$S.nozero = S.nozero
+  
+  areas@data$mean <- monte.carlo[(N+1),1:len]       # Mean points in each area after resampling
+  areas@data$conf.upper <- monte.carlo[(N+2),1:len] # Lower confidence interval
+  areas@data$conf.lower <- monte.carlo[(N+3),1:len] # Upper confidence interval
+ 
+```
+
+### Plot the results
+
+```{r plot}
+  
+  plot(
+    monte.carlo[(N + 1),],areas$base,
+    pch = 16, col = "black", cex = 0.5, xlab = "Resampled Counts", ylab = "Observed Count"
+  )
+
+  for (i in 1:N) {
+    points(monte.carlo[i,],areas$base, col = "grey", pch = 16, cex = 0.5)
+  }
+  plot(
+    monte.carlo[(N + 2),], areas$base[], 
+    pch = 16,col = "dark grey",cex = 0.5,xlab = "Bootstrap Estimates",ylab = "Observed Count"
+  )
+  
+  points(monte.carlo[(N + 3),], areas$base,pch = 16,col = "dark grey",cex = 0.5)	#Just to check things out, plot the actual and bootstrapped values	against each other
+  points(monte.carlo[(N + 1),], areas$base,pch = 16,col = "black",cex = 0.5)
+  text(125,30,"Mean",pos = 4,cex = 0.75)
+  text(125,15,"Confidence Intervals",pos = 4,cex = 0.75)
+  points(125,31,col = "black",pch = 16,cex = 0.8)
+  points(125,16,col = "grey",pch = 16,cex = 0.8)
+  
+
+
+
+
+#t <- andresen.spatial.test(base=base.data, test=test.data, areas=areas)
 
 
 ```
