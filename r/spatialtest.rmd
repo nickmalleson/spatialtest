@@ -75,7 +75,7 @@ Configure the script here. (Un)comment or edit lines as appropriate to change th
 datasource <- "../data/london_burglary/" 
 
 # Some Vancouver data:
-#XXXX
+datasource <- "../data/vancouver_all/"
 
 base.layer <- "points1" # THe name of the base dataset
 test.layer <- "points2" # THe name of the test dataset
@@ -83,7 +83,7 @@ areas.layer <- "areas"  # The polygon boundary file
 
 N <- 100 # The number of iterations in the monte carlo simulation
 
-multiprocess <- FALSE # Whether to run the simulation using multiple cores
+# multiprocess <- FALSE # Whether to run the simulation using multiple cores
 ```
  
 
@@ -129,11 +129,11 @@ areas$test <- poly.counts(test.data,areas)
 
 # Check that all of the crimes are within an area
 if ( sum(areas$base) != length(base.data) ) {
-  warning(paste("There are", length(base.data)-sum(areas$base), 
+  warning(paste("There are", length(base.data)-sum(areas$base), "/", length(base.data),
                 "crimes in the base data are not within an administrative area"))
 }
 if ( sum(areas$test) != length(test.data) ) {
-  warning(paste("There are", length(test.data)-sum(areas$test), 
+  warning(paste("There are", length(test.data)-sum(areas$test),"/", length(test.data),
                 "crimes in the test data are not within an administrative area"))
 }
 
@@ -166,63 +166,15 @@ if ( sum(areas$test) != length(test.data) ) {
   # N columns are for the simulations for each run, remaining three columns are for the mean
   # of all runs and the upper and lower confidence intervals.
   monte.carlo <- array(0,c((N + 3),len))
-  
-  # Do the simulations in single thread (normal) mode, or multi-process
- 
-  if (multiprocess) {
-    # http://projects.revolutionanalytics.com/documents/parallelr/parallerrpkgs/
-    # http://stackoverflow.com/questions/1395309/how-to-make-r-use-all-processors
-    # Also see 'Using The foreach Package - CRAN' 
-    library("foreach")
-    library("doMC") # Register a parallel backend (for mac) 
-    runSim <- function(iteration, crimes) { # Run one simulation
-      # i is the simulation iteration number (not really used
-      # crimes is a list of number of crimes in each area
-      
-      len <- length(crimes)      # The number of areas
-      tot <- sum(crimes)    # The number of crimes
-      res <- array(0,c(2,tot))  # Make a results array
-
-      ct <- 0 # counter
-      for (i in 1:len) {
-        start <- ct + 1
-        end <- start + crimes[i] - 1 # Number of crimes in area i
-        res[1,c(start:end)] <- i
-        ct <- end
-      }
-
-      mc.samp <- trunc(runif(tot, min = 1,max = (tot + 1))) # Create a random number for each row
-      res[2,(1:tot)] <- res[1,mc.samp[1:tot]] # Store sampled data in result[2,] temporarily
-
-      mc <- array(0,c(1,len)) # Store the re-aggregated results
-      for (j in 1:len) {
-        mc[1,j] <- sum(mc.samp[2,] == j) #compute reaggregate to areas
-      }
-      mc # Return this
-    } # myFunc
     
-    # XXXX CAN'T GET THIS WORKING!!
-    
-    #t <- foreach(sim=1:N, .combine='c') %dopar% { trunc(sim) } # foreach
-    
-    t <- foreach(sim=1:N, crimes=rep(list(areas$base),N), .combine='c') %dopar% {
-      runSim(sim, crimes)
-    } # foreach
-    
-    # XXXX complete the array (turn 't' into monte.carlo)
-    
-  } else { # single threaded:
-    
-    for (i in 1:N) { # (Could do this bit multi-process)
-      #resample (NOT SURE HOW THIS WORKS!!)
-      mc.samp <- trunc(runif(tot,min = 1,max = (tot + 1))) # Create a random number for each row
-      result[2,(1:tot)] <- result[1,mc.samp[1:tot]] # Store sampled data in result[2,] temporarily
-      for (j in 1:len) {
-        monte.carlo[i,j] <- sum(result[2,] == j) #compute reaggregate to areas
-      }
+  for (i in 1:N) { # (Could do this bit multi-process)
+    #resample (NOT SURE HOW THIS WORKS!!)
+    mc.samp <- trunc(runif(tot,min = 1,max = (tot + 1))) # Create a random number for each row
+    result[2,(1:tot)] <- result[1,mc.samp[1:tot]] # Store sampled data in result[2,] temporarily
+    for (j in 1:len) {
+      monte.carlo[i,j] <- sum(result[2,] == j) #compute reaggregate to areas
     }
-    
-  } # else
+  }
   
   # Calculate the mean and confidence intervals for each area after the simulations
   temp <- rep(0,N)
@@ -295,3 +247,56 @@ if ( sum(areas$test) != length(test.data) ) {
 ## Validate the test
 
 TODO: run on some real data for Vancouver and Leeds, and check that the results are consistent with previous results calculated using the Java version of the test, or manually (e.g. in Excel)
+
+
+
+## Extras
+
+I tried to get a multi-process version of the algorithm working but failed. Here's the code anyway.
+
+```{r multiprocess, eval=FALSE}
+    # Do the simulations in single thread (normal) mode, or multi-process
+ 
+  if (multiprocess) {
+    # http://projects.revolutionanalytics.com/documents/parallelr/parallerrpkgs/
+    # http://stackoverflow.com/questions/1395309/how-to-make-r-use-all-processors
+    # Also see 'Using The foreach Package - CRAN' 
+    library("foreach")
+    library("doMC") # Register a parallel backend (for mac) 
+    runSim <- function(iteration, crimes) { # Run one simulation
+      # i is the simulation iteration number (not really used
+      # crimes is a list of number of crimes in each area
+      
+      len <- length(crimes)      # The number of areas
+      tot <- sum(crimes)    # The number of crimes
+      res <- array(0,c(2,tot))  # Make a results array
+
+      ct <- 0 # counter
+      for (i in 1:len) {
+        start <- ct + 1
+        end <- start + crimes[i] - 1 # Number of crimes in area i
+        res[1,c(start:end)] <- i
+        ct <- end
+      }
+
+      mc.samp <- trunc(runif(tot, min = 1,max = (tot + 1))) # Create a random number for each row
+      res[2,(1:tot)] <- res[1,mc.samp[1:tot]] # Store sampled data in result[2,] temporarily
+
+      mc <- array(0,c(1,len)) # Store the re-aggregated results
+      for (j in 1:len) {
+        mc[1,j] <- sum(mc.samp[2,] == j) #compute reaggregate to areas
+      }
+      mc # Return this
+    } # myFunc
+    
+    # XXXX CAN'T GET THIS WORKING!!
+    
+    #t <- foreach(sim=1:N, .combine='c') %dopar% { trunc(sim) } # foreach
+    
+    t <- foreach(sim=1:N, crimes=rep(list(areas$base),N), .combine='c') %dopar% {
+      runSim(sim, crimes)
+    } # foreach
+    
+    # XXXX complete the array (turn 't' into monte.carlo)
+  }
+```
