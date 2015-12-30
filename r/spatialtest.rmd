@@ -118,11 +118,11 @@ Run the test by aggregating points to administrative areas. The code does the fo
  2. Calculate global S value
  2. Return results
  
-_Note_: This R implementation was originally provided by Shane Johnson - thanks!!
+_Note_: This R implementation was originally provided by [Shane Johnson](https://iris.ucl.ac.uk/iris/browse/profile?upi=SJOHN86) - thanks!!
 
 ### Aggregate points.
 
-```{r aggregate}
+```{r A-aggregate}
 # Count the number of base and test features in each area
 areas$base <- poly.counts(base.data, areas)
 areas$test <- poly.counts(test.data,areas)
@@ -141,7 +141,7 @@ if ( sum(areas$test) != length(test.data) ) {
 
 ### Run the test 
   
-```{r runTest}
+```{r A-runTest}
 
   len <- length(areas) # The number of areas
   tot <- sum(areas$base)    # The number of crimes
@@ -185,9 +185,17 @@ if ( sum(areas$test) != length(test.data) ) {
     monte.carlo[(N + 3),i] <- temp[0.05 * N] #lower
   }
   
-  # Compute the S Index, in this case comparing the values from year to the next for each area
+  # Compute the local S index for each area.
+  # 0 if within confidence intervals, -1 or +1 otherwise
+  areas@data$Local.S <- ifelse(
+    areas$test <= monte.carlo[(N + 3),], -1,
+       ifelse( areas$test >= monte.carlo[(N + 2),], 1, 0 )
+    )
+  
+  
+  # Compute the global S Index
   # Do this by adding up the number of times that the test data point is within the upper and lower bounds
-  # of the base data
+  # of the base data. (Could also do this using the local index calculated above)
   S <-  sum(
     (areas$test >= monte.carlo[(N + 3),]) & (areas$test <= monte.carlo[(N + 2),])
     ) / len 
@@ -206,43 +214,100 @@ if ( sum(areas$test) != length(test.data) ) {
   areas@data$S.nozero = S.nozero
   
   areas@data$mean <- monte.carlo[(N+1),1:len]       # Mean points in each area after resampling
-  areas@data$conf.upper <- monte.carlo[(N+2),1:len] # Lower confidence interval
-  areas@data$conf.lower <- monte.carlo[(N+3),1:len] # Upper confidence interval
+  areas@data$conf.upper <- monte.carlo[(N+2),1:len] # Upper confidence interval
+  areas@data$conf.lower <- monte.carlo[(N+3),1:len] # Lower confidence interval
  
 ```
 
 ### Plot the results
 
-```{r plot}
+First plot all of the samples against the original observations.
+
+```{r A-plotSamples}
   
+  # Plot the mean of the samples against the observed count.
   plot(
-    monte.carlo[(N + 1),],areas$base,
-    pch = 16, col = "black", cex = 0.5, xlab = "Resampled Counts", ylab = "Observed Count"
+    areas@data$mean, areas$base, xlab = "Resampled Counts", ylab = "Observed Count",
+    main="All samples and their mean for each area in the base data set"
   )
 
-  for (i in 1:N) {
+  # Plot all of the samples
+  for (i in 1:N) { 
     points(monte.carlo[i,],areas$base, col = "grey", pch = 16, cex = 0.5)
   }
-  plot(
-    monte.carlo[(N + 2),], areas$base[], 
-    pch = 16,col = "dark grey",cex = 0.5,xlab = "Bootstrap Estimates",ylab = "Observed Count"
-  )
+  # And add the means back in again (otherwise they are hidden by the samples)
+  points(areas@data$mean, areas$base, pch = 16, col = "black", cex = 0.5, )
   
-  points(monte.carlo[(N + 3),], areas$base,pch = 16,col = "dark grey",cex = 0.5)	#Just to check things out, plot the actual and bootstrapped values	against each other
-  points(monte.carlo[(N + 1),], areas$base,pch = 16,col = "black",cex = 0.5)
-  text(125,30,"Mean",pos = 4,cex = 0.75)
-  text(125,15,"Confidence Intervals",pos = 4,cex = 0.75)
-  points(125,31,col = "black",pch = 16,cex = 0.8)
-  points(125,16,col = "grey",pch = 16,cex = 0.8)
-  
-
-
-
-
-#t <- andresen.spatial.test(base=base.data, test=test.data, areas=areas)
-
+  # Add a legend
+  legend(x=0, y=max(areas$base), c('Mean','Samples'), pch=16, col=c("black","grey") )
 
 ```
+
+Plot the mean and the confidence intervals for each area
+
+```{r A-plotConfInt}
+
+  # Upper confidence interval first
+  plot(
+    monte.carlo[(N + 2),], areas$base, 
+    pch = 16, col = "dark grey",cex = 0.5,xlab = "Bootstrap Estimates",ylab = "Observed Count"
+    #main="The mean and confidence interval for each area in the base data set"
+  )
+  
+  # Lower confidence interval
+  points(monte.carlo[(N + 3),], areas$base,pch = 16,col = "dark grey",cex = 0.5)
+  
+  # Mean
+  points(areas@data$mean, areas$base, pch = 16,col = "black",cex = 0.5)
+  
+  legend(x=0, y=max(areas$base), 
+         c('Mean','Confidence intervals'),  pch=16, col=c("black","grey"), cex=0.8)
+
+```
+
+Plot the mean and the confidence intervals for each area along with the number of crimes in the test data set.
+
+```{r A-plotConfIntWithTest}
+
+  # Upper confidence interval first
+  plot(
+    monte.carlo[(N + 2),], areas$base, 
+    pch = 16, col = "dark grey",cex = 0.5,xlab = "Bootstrap Estimates",ylab = "Observed Count"
+    #main="The mean and confidence interval for each area in the base data set"
+  )
+  
+  # Lower confidence interval
+  points(monte.carlo[(N + 3),], areas$base,pch = 16,col = "dark grey",cex = 0.5)
+  
+  # Mean
+  points(areas@data$mean, areas$base, pch = 16,col = "black",cex = 0.5)
+  
+  # Test data - blue for within intervals, red outside
+  points(
+    areas$test, areas$base, pch = 16, cex = 0.5,
+    col=ifelse(areas$test<monte.carlo[(N + 3),] | areas$test>monte.carlo[(N + 2),], "red", "green") 
+  )
+  
+  legend(x=0, y=max(areas$base), 
+         c('Mean','Confidence intervals', 'Test value within intervals', 'Test value outside intervals'), 
+         pch=16, col=c("black","grey","blue", "green"), cex=0.8)
+
+```
+
+### Map the results of the administrative test
+
+```{r A-MapResults}
+
+  # Create the shading scheme:
+  shades <- shading(c(0,1), cols = c("#d8b365", "#f5f5f5", "#5ab4ac"))
+  # Create the choropleth map, using the shading scheme defined above
+  choropleth(areas, areas$Local.S, shading = shades)
+  # Add the lengend. For some reason choro.legend doesn't work
+  #choro.legend(px=480000, py=5462000, shades )
+  legend(x=480000, y=5462000, c("-1", "0", "+1"), col = c("#d8b365", "#f5f5f5", "#5ab4ac"), pch=15)
+  
+```
+
 
 ## Validate the test
 
