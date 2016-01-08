@@ -151,16 +151,17 @@ Definte a function that will run the test. This function expects an area file to
 #' @param basepoints The base point dataset. This is expected to be a SpatialPointsDataFrame, but might work with other types of objects
 #' @param testpoints The test point dataset. This is expected to be a SpatialPointsDataFrame, but might work with other types of objects
 #' @param areas The areas to aggregate the points to and run the test on. This is expected to be a SpatialPolygonsDataFrame.
+#' @param get.monte.carlo If true, then instead of returning the areas, return an array with the full results of all of the monte carlo runs in it. This is useful for debugging, or for plotting the results of each run. The array has N + 3 dimensions where N is the number of monte carlo iterations and the remaining three dimensions give the mean (N + 1), upper limit (N + 2), lower limit (N + 3).
 #' @return The \code{areas} dataset with some new columns:
 #'  Local.S - The S index for each area (either -1, 0, or 1)
 #'   S - The global S index (which will be the same for each area)
 #'   S.nozero - Same as 'S', but ignores areas without any crimes in them
 #'   mean - The mean points in each area after resampling
 #'   conf.upper - the Upper confidence interval for the test
-#'   conf.lower <- The lower confidence interval for the test
+#'   conf.lower - The lower confidence interval for the test
 #' @examples
 #' spatialtest(base.data, test.data, areas)
-spatialtest <- function(basepoints, testpoints, areas) {
+spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   
   # Aggregate the points to the area dataset
   areas$base <- poly.counts(base.data, areas)
@@ -208,6 +209,11 @@ spatialtest <- function(basepoints, testpoints, areas) {
     monte.carlo[(N + 3),i] <- temp[0.05 * N] #lower
   }
   
+  # At this point we can just return the full monte carlo results if that's what the caller wants
+  if (get.monte.carlo) {
+    return(monte.carlo)
+  }
+  
   # Compute the local S index for each area.
   # 0 if within confidence intervals, -1 or +1 otherwise
   areas@data$Local.S <- ifelse(
@@ -251,7 +257,10 @@ Now just call the function to run the test on the data.
 
 ```{r A-runTest}
 
-result <- spatialtest(basepoints = base.data, testpoints = test.data, areas = areas)
+result <- spatialtest(
+  basepoints = base.data,
+  testpoints = test.data,
+  areas = areas)
 
 ```
 
@@ -260,6 +269,9 @@ result <- spatialtest(basepoints = base.data, testpoints = test.data, areas = ar
 First plot all of the samples against the original observations.
 
 ```{r A-plotSamples}
+
+  # We need to re-run the test to get the original monte carlo observations 
+  monte.carlo <- spatialtest(basepoints = base.data, testpoints = test.data, areas = areas, get.monte.carlo = TRUE)
   
   # Plot the mean of the samples against the observed count.
   plot(
