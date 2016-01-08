@@ -122,8 +122,9 @@ _Note_: This R implementation was originally provided by [Shane Johnson](https:/
 
 ### Aggregate points.
 
+Count the number of base and test features in each area, see how many are within area boundaries and map them to check that they look OK. This is mostly for checking the data look OK.
+
 ```{r A-aggregate}
-# Count the number of base and test features in each area
 areas$base <- poly.counts(base.data, areas)
 areas$test <- poly.counts(test.data,areas)
 
@@ -139,9 +140,31 @@ if ( sum(areas$test) != length(test.data) ) {
 
 ```
 
-### Run the test 
+### Define the test 
+
+Definte a function that will run the test. This function expects an area file to aggregate the points to. This will not be a requirement in later versions.
   
-```{r A-runTest}
+```{r definteAreaTest}
+
+#' Run Martin Andresen's Spatial Test
+#' 
+#' @param basepoints The base point dataset. This is expected to be a SpatialPointsDataFrame, but might work with other types of objects
+#' @param testpoints The test point dataset. This is expected to be a SpatialPointsDataFrame, but might work with other types of objects
+#' @param areas The areas to aggregate the points to and run the test on. This is expected to be a SpatialPolygonsDataFrame.
+#' @return The \code{areas} dataset with some new columns:
+#'  Local.S - The S index for each area (either -1, 0, or 1)
+#'   S - The global S index (which will be the same for each area)
+#'   S.nozero - Same as 'S', but ignores areas without any crimes in them
+#'   mean - The mean points in each area after resampling
+#'   conf.upper - the Upper confidence interval for the test
+#'   conf.lower <- The lower confidence interval for the test
+#' @examples
+#' spatialtest(base.data, test.data, areas)
+spatialtest <- function(basepoints, testpoints, areas) {
+  
+  # Aggregate the points to the area dataset
+  areas$base <- poly.counts(base.data, areas)
+  areas$test <- poly.counts(test.data,areas)
 
   len <- length(areas) # The number of areas
   tot <- sum(areas$base)    # The number of crimes
@@ -216,7 +239,20 @@ if ( sum(areas$test) != length(test.data) ) {
   areas@data$mean <- monte.carlo[(N+1),1:len]       # Mean points in each area after resampling
   areas@data$conf.upper <- monte.carlo[(N+2),1:len] # Upper confidence interval
   areas@data$conf.lower <- monte.carlo[(N+3),1:len] # Lower confidence interval
+  
+  return(areas)
+}
  
+```
+
+### Run the test
+
+Now just call the function to run the test on the data.
+
+```{r A-runTest}
+
+result <- spatialtest(basepoints = base.data, testpoints = test.data, areas = areas)
+
 ```
 
 ### Plot the results
@@ -227,19 +263,19 @@ First plot all of the samples against the original observations.
   
   # Plot the mean of the samples against the observed count.
   plot(
-    areas@data$mean, areas$base, xlab = "Resampled Counts", ylab = "Observed Count",
+    result@data$mean, result$base, xlab = "Resampled Counts", ylab = "Observed Count",
     main="All samples and their mean for each area in the base data set"
   )
 
   # Plot all of the samples
   for (i in 1:N) { 
-    points(monte.carlo[i,],areas$base, col = "grey", pch = 16, cex = 0.5)
+    points(monte.carlo[i,],result$base, col = "grey", pch = 16, cex = 0.5)
   }
   # And add the means back in again (otherwise they are hidden by the samples)
-  points(areas@data$mean, areas$base, pch = 16, col = "black", cex = 0.5, )
+  points(result@data$mean, result$base, pch = 16, col = "black", cex = 0.5, )
   
   # Add a legend
-  legend(x=0, y=max(areas$base), c('Mean','Samples'), pch=16, col=c("black","grey") )
+  legend(x=0, y=max(result$base), c('Mean','Samples'), pch=16, col=c("black","grey") )
 
 ```
 
@@ -249,18 +285,18 @@ Plot the mean and the confidence intervals for each area
 
   # Upper confidence interval first
   plot(
-    monte.carlo[(N + 2),], areas$base, 
+    result$conf.upper, result$base, 
     pch = 16, col = "dark grey",cex = 0.5,xlab = "Bootstrap Estimates",ylab = "Observed Count"
     #main="The mean and confidence interval for each area in the base data set"
   )
   
   # Lower confidence interval
-  points(monte.carlo[(N + 3),], areas$base,pch = 16,col = "dark grey",cex = 0.5)
+  points(result$conf.lower, result$base,pch = 16,col = "dark grey",cex = 0.5)
   
   # Mean
-  points(areas@data$mean, areas$base, pch = 16,col = "black",cex = 0.5)
+  points(result$mean, result$base, pch = 16,col = "black",cex = 0.5)
   
-  legend(x=0, y=max(areas$base), 
+  legend(x=0, y=max(result$base), 
          c('Mean','Confidence intervals'),  pch=16, col=c("black","grey"), cex=0.8)
 
 ```
@@ -271,24 +307,24 @@ Plot the mean and the confidence intervals for each area along with the number o
 
   # Upper confidence interval first
   plot(
-    monte.carlo[(N + 2),], areas$base, 
+    result$conf.upper, result$base, 
     pch = 16, col = "dark grey",cex = 0.5,xlab = "Bootstrap Estimates",ylab = "Observed Count"
     #main="The mean and confidence interval for each area in the base data set"
   )
   
   # Lower confidence interval
-  points(monte.carlo[(N + 3),], areas$base,pch = 16,col = "dark grey",cex = 0.5)
+  points(result$conf.lower, result$base,pch = 16,col = "dark grey",cex = 0.5)
   
   # Mean
-  points(areas@data$mean, areas$base, pch = 16,col = "black",cex = 0.5)
+  points(result@data$mean, result$base, pch = 16,col = "black",cex = 0.5)
   
   # Test data - blue for within intervals, red outside
   points(
-    areas$test, areas$base, pch = 16, cex = 0.5,
-    col=ifelse(areas$test<monte.carlo[(N + 3),] | areas$test>monte.carlo[(N + 2),], "red", "green") 
+    result$test, result$base, pch = 16, cex = 0.5,
+    col=ifelse(result$test<result$conf.upper | result$test>result$conf.lower, "red", "green") 
   )
   
-  legend(x=0, y=max(areas$base), 
+  legend(x=0, y=max(result$base), 
          c('Mean','Confidence intervals', 'Test value within intervals', 'Test value outside intervals'), 
          pch=16, col=c("black","grey","blue", "green"), cex=0.8)
 
@@ -301,7 +337,7 @@ Plot the mean and the confidence intervals for each area along with the number o
   # Create the shading scheme:
   shades <- shading(c(0,1), cols = c("#d8b365", "#f5f5f5", "#5ab4ac"))
   # Create the choropleth map, using the shading scheme defined above
-  choropleth(areas, areas$Local.S, shading = shades)
+  choropleth(result, result$Local.S, shading = shades)
   # Add the lengend. For some reason choro.legend doesn't work
   #choro.legend(px=480000, py=5462000, shades )
   legend(x=480000, y=5462000, c("-1", "0", "+1"), col = c("#d8b365", "#f5f5f5", "#5ab4ac"), pch=15)
@@ -313,6 +349,15 @@ Plot the mean and the confidence intervals for each area along with the number o
 
 TODO: run on some real data for Vancouver and Leeds, and check that the results are consistent with previous results calculated using the Java version of the test, or manually (e.g. in Excel)
 
+## Run Grid Test
+
+Run the test again, but this time create a regular grid
+
+XXXX - first wrap the test above in a function
+
+XXXX
+
+## Run Expanding Cell test
 
 
 ## Extras
