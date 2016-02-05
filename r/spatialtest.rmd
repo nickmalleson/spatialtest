@@ -123,7 +123,7 @@ _Note_: This R implementation was originally provided by [Shane Johnson](https:/
 
 ### Aggregate points.
 
-Count the number of base and test features in each area, see how many are within area boundaries and map them to check that they look OK. This is mostly for checking the data look OK.
+Count the number of base and test features in each area, see how many are within area boundaries and map them to check that they look OK. This is mostly for checking the data look OK, it isn't a requirement for the algorithm (that begins by aggregating data).
 
 ```{r A-aggregate}
 areas$base <- poly.counts(base.data, areas)
@@ -138,6 +138,13 @@ if ( sum(areas$test) != length(test.data) ) {
   warning(paste("There are", length(test.data)-sum(areas$test),"/", length(test.data),
                 "crimes in the test data are not within an administrative area"))
 }
+
+if ( 0 %in% areas$base | 0 %in% areas$test) {
+  warning(paste("There are", length(areas[areas$base==0,]),"/", length(areas),
+                "areas without any base crimes and",length(areas[areas$test==0,]),
+                "areas without any test crimes."))
+}
+
 
 ```
 
@@ -180,6 +187,9 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   ct <- 0 # counter
   for (i in 1:len) {
     start <- ct + 1
+    # XXXX Is there a bug here?? If there are no crimes in area i then end<start. I'll experiment
+    # with this in the latter implementation. ONCE I'VE FIXED THE PROBLEM, COME BACK HERE
+    # AND GET RID OF THIS TEXT OR CHANGE THE CODE SO THAT IT IS CORRECT
     end <- start + areas$base[i] - 1 # Number of crimes in area i
     result[1,c(start:end)] <- i
     ct <- end
@@ -237,7 +247,7 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
     (areas$test >= monte.carlo[N + 3,]) & (areas$test <= monte.carlo[N + 2,]) & (areas$test > 0)
     ) / len 
   
-  print(paste("S index: ",S, ". Excluding zeros: ",S.nozero))
+  #print(paste("S index: ",S, ". Excluding zeros: ",S.nozero))
   
   # Store results ready to be returned when this is implemented as a function
   areas@data$S = S # The s index, will be the same for each area (it is global)
@@ -262,6 +272,8 @@ result <- spatialtest(
   basepoints = base.data,
   testpoints = test.data,
   areas = areas)
+
+print(result)
 
 ```
 
@@ -350,7 +362,7 @@ Plot the mean and the confidence intervals for each area along with the number o
   # Create the shading scheme:
   shades <- shading(c(0,1), cols = c("#d8b365", "#f5f5f5", "#5ab4ac"))
   # Create the choropleth map, using the shading scheme defined above
-  choropleth(result, result$Local.S, shading = shades)
+  choropleth(result, result$Local.S, shading = shades, axes=T)
   # Add the lengend. For some reason choro.legend doesn't work
   #choro.legend(px=480000, py=5462000, shades )
   legend(x=480000, y=5462000, c("-1", "0", "+1"), col = c("#d8b365", "#f5f5f5", "#5ab4ac"), pch=15)
@@ -376,7 +388,7 @@ Ultimately, three different kinds of behaviour will be implemented depending on 
  - If no `areas` parameter is provided, then the test will be run on a number of different regular grids of increasing size.
  - If a list is provided, then the test will assume that this provides the number of cells across (`areas[[1]]`) and down (`areas[[2]]`) and will create a sigle regular grid that spans the extent of all of the input points with that many cells in it.
 
-```{r defineGridTest}
+```{r defineGridTest, eval=FALSE}
 
 #' Run Martin Andresen's Spatial Test
 #' 
@@ -399,40 +411,53 @@ Ultimately, three different kinds of behaviour will be implemented depending on 
 spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   
   if (is(areas,"SpatialPolygonsDataFrame")) {
+    
     # The areas parameter is some polygons, so no need to do anything special.
     # (This if statement could be removed, but is left here for clarity)
-  }
-  
-  if (is.list(areas)) {
-    # The areas parameter is a list that provides the number of cells across and down. So now make a regular grid with these characteristics
+    
+  } else if (is.list(areas)) {
+    
+    # The areas parameter is a list that provides the number of cells across and down. 
+    # So now make a regular grid with these characteristics
     
     # Make a raster first, then convert this to a SpatialPolygonsDataFrame
     rast <- raster()
+    proj4string(rast) <- proj4string(base.data)
     # Calculate extent of all the point (both crime and test data)
-    extent(rast) <- extent(gUnion(base.data, test.data)) 
+    extent(rast) <- extent(base.data + test.data) # (could use gUnion(), but that's slower)
     # Now set the number of rows and columns
     ncol(rast) <- areas[[1]]
     nrow(rast) <- areas[[2]]
-    # Finish by converting to a SpatialPolygonsDataFrame
-    areas = SpatialPolygonsDataFrame(rast)
+    values(rast)<-0 # Set all cell values to 0
+    # Finish by converting to a SpatialPolygonsDataFrame and setting the CRS to match the points
+    areas = rasterToPolygons(rast)
+    
+    
+  } else if  (is.null(areas)) {
+    
+    # If areas is null the run the expanding cell algorithm
+    XXXX <- 1
+    
+  } else {
+    
+    warning("I don't understand the 'areas' parameter")
+    return(-1)
+    
   }
   
-  if (areas==NULL) {
-    # If areas is null the run the expanding cell algorithm
-    XXXX
-  }
+
   
   
   # Aggregate the points to the area dataset
-  areas$base <- poly.counts(base.data, areas)
-  areas$test <- poly.counts(test.data,areas)
+  areas$base <- as.integer(poly.counts(base.data, areas))
+  areas$test <- as.integer(poly.counts(test.data,areas))
 
   len <- length(areas) # The number of areas
   tot <- sum(areas$base)    # The number of crimes
   
   # An array to store the results of each monte carlo iteration temporarily.
   # This is in long form (one row per crime). Dim 1=i, 2=sampled data (temp)
-  result <- array(0,c(2,tot))
+  result <- array(0,c(2,tot+1))
   
   # Generate the long form of the data for sampling - one row per crime
   # (actually it's one crime per colum technically, but that doesn't really matter)
@@ -440,7 +465,14 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   for (i in 1:len) {
     start <- ct + 1
     end <- start + areas$base[i] - 1 # Number of crimes in area i
+    # XXXX ERROR HERE
+    print(paste(ct," ",start," ", end, " ",i))
+    # Sanity check: shouldn't override so current values in result should be 0
+    if (FALSE %in% result[1,c(start:end)]==0) {
+      warning("Overriding a previous result!! This shouldn't happen")
+    }
     result[1,c(start:end)] <- i
+    # XXXX ERROR HERE
     ct <- end
   }
   
@@ -454,6 +486,7 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   for (i in 1:N) { # (Could do this bit multi-process)
     #resample (NOT SURE HOW THIS WORKS!!)
     mc.samp <- trunc(runif(tot,min = 1,max = (tot + 1))) # Create a random number for each row
+    #print(paste("\t",tot," ",mc.samp))
     result[2,(1:tot)] <- result[1,mc.samp[1:tot]] # Store sampled data in result[2,] temporarily
     for (j in 1:len) {
       monte.carlo[i,j] <- sum(result[2,] == j) #compute reaggregate to areas
@@ -476,10 +509,10 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   
   # Compute the local S index for each area.
   # 0 if within confidence intervals, -1 or +1 otherwise
-  areas@data$Local.S <- ifelse(
+  areas@data$Local.S <- as.integer(ifelse(
     areas$test <= monte.carlo[(N + 3),], -1,
        ifelse( areas$test >= monte.carlo[(N + 2),], 1, 0 )
-    )
+    ))
   
   
   # Compute the global S Index
@@ -503,8 +536,8 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   areas@data$S.nozero = S.nozero
   
   areas@data$mean <- monte.carlo[(N+1),1:len]       # Mean points in each area after resampling
-  areas@data$conf.upper <- monte.carlo[(N+2),1:len] # Upper confidence interval
-  areas@data$conf.lower <- monte.carlo[(N+3),1:len] # Lower confidence interval
+  areas@data$conf.upper <- as.integer(monte.carlo[(N+2),1:len]) # Upper confidence interval
+  areas@data$conf.lower <- as.integer(monte.carlo[(N+3),1:len]) # Lower confidence interval
   
   return(areas)
 }
@@ -513,24 +546,42 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
 
 XXXX HERE - FUNCTION DOESN'T WORK - RUN FOLLOWING CHUNK AND DEBUG
 
+UPDATE: I think the problem is with the line: end <- start + areas$base[i] - 1
+
+UPDATE2: I have tested with the Vancouver data. R and Java give entirely different results. Maybe this function is calculating the test a different way. I really need to get my head round the resampling on line 489. Also see the explanation on the paper, pg 103 http://www.tandfonline.com/doi/pdf/10.1080/15230406.2014.972456
+
+If there are no crimes in area i then start>end, which is odd. There might be a bug in the original script. Test this by:
+ 1. run the test using the vancouver data and output the results
+ 2. run the test using the same data with the Java program
+ 3. compare the results of the two. If they're different then the R implementation has a bug I think. It might not have shown itself in Shane's data unless the *last* area had no crimes (if other areas have no crimes it isn't a problem - because incorrect values will just override previous ones??)
+
+
 ### Run the Single Grid Test
 
 Run the test and create a single regular grid.
 
-```{r Grid-runTest}
+```{r Grid-runTest, eval=FALSE}
+areas <- readOGR(ds = datasource, layer=areas.layer)
+#base.data <- readOGR(ds = datasource, layer=base.layer)
+#test.data <- readOGR(ds = datasource, layer=test.layer)
 
 result2 <- spatialtest(
   basepoints = base.data,
   testpoints = test.data,
-  areas = list(20,30))
+  #areas = list(20,30)
+  areas = areas # Useful to use second implementation to run the original areas test (debugging)
+  )
+writeOGR(result2, ds = datasource, layer= "vancouver_test_r", driver = "ESRI Shapefile", overwrite_layer = TRUE)
+
 
 ```
+
 
 Check that it looked OK by plotting the confidence intervals
 
 _XXXX Make this plotting code into a function so I don't have to keep repeating it_
 
-```{r A-plotConfInt}
+```{r B-plotConfInt, eval=FALSE}
 
   # Upper confidence interval first
   plot(
@@ -552,12 +603,12 @@ _XXXX Make this plotting code into a function so I don't have to keep repeating 
 
 Map the results of the grid test
 
-```{r A-MapResults}
+```{r B-MapResults, eval=FALSE}
 
   # Create the shading scheme:
   shades <- shading(c(0,1), cols = c("#d8b365", "#f5f5f5", "#5ab4ac"))
   # Create the choropleth map, using the shading scheme defined above
-  choropleth(result2, result2$Local.S, shading = shades)
+  choropleth(result2, result2$Local.S, shading = shades, border=NULL)
   # Add the lengend. For some reason choro.legend doesn't work
   #choro.legend(px=480000, py=5462000, shades )
   legend(x=480000, y=5462000, c("-1", "0", "+1"), col = c("#d8b365", "#f5f5f5", "#5ab4ac"), pch=15)
