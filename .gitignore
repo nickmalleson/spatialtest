@@ -4,6 +4,8 @@
 /AndresenSpatialTest/data/out*
 /AndresenSpatialTest/london_data/
 
+data/vancouver_all/
+
 /example/*
 
 r/.Rhistory 

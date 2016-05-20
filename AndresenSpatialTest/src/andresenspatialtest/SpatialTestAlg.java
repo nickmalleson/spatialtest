@@ -210,23 +210,29 @@ public class SpatialTestAlg {
             a.absPercentageTestPoints = 100 * ((double) a.absNumTestPoints / absTotalTestPoints);
         }
 
-        /* For each area, rank the percentages in ascending order and remove outliers */
+        /* For each area, rank the percentages in ascending order and remove outliers.
+        Also do this for the number of test points (but this isn't used in the analysis) */
         double removePercentage = (100.0 - this.confidenceInterval) / 100.0;
         int numToRemove = (int) Math.round((this.monteCarlo * removePercentage) / 2.0); // The number of samples to remove
         output("Ranking percentages in ascending order and removing " + numToRemove + " outliers from top and bottom");
         for (Area a : this.areas) {
             // Sort the list of percentages
             Double[] percentages = a.percentageTestPoints.toArray(new Double[a.percentageTestPoints.size()]);
+            Integer[] numbers = a.numTestPoints.toArray(new Integer[a.numTestPoints.size()]);
             Arrays.sort(percentages);
+            Arrays.sort(numbers);
             // (List converted to a Vector to allow remove() operation, otherwise not supported)
             a.pTestPoitsNoOutliers = new Vector<Double>(Arrays.asList(percentages));
+            a.numTestPoitsNoOutliers = new Vector<Integer>(Arrays.asList(numbers));
 
             // Remove upper and lower outliers
             for (int i = 0; i < numToRemove; i++) { // Remove from start of list
                 a.pTestPoitsNoOutliers.remove(0); // (all objects shifted along when one removed)
+                a.numTestPoitsNoOutliers.remove(0);
             }
             for (int i = 0; i < numToRemove; i++) {// And from the end
                 a.pTestPoitsNoOutliers.remove(a.pTestPoitsNoOutliers.size() - 1);
+                a.numTestPoitsNoOutliers.remove(a.numTestPoitsNoOutliers.size() - 1);
             }
         }
 
@@ -430,8 +436,8 @@ public class SpatialTestAlg {
                 newFeature.setAttribute("PctTstPts", a.absPercentageTestPoints);
                 
                 // Also add the confidence intervals
-                newFeature.setAttribute("ConfLow", -1); // -1 for now as I need to go back and remember the number of points
-                newFeature.setAttribute("ConfUpp", -1);
+                newFeature.setAttribute("ConfLow",  a.numTestPoitsNoOutliers.get(0)); // The lower bound on absolute number of points (useful to see)
+                newFeature.setAttribute("ConfUpp",  a.numTestPoitsNoOutliers.get(a.numTestPoitsNoOutliers.size()-1));
                 newFeature.setAttribute("ConfLowP", a.pTestPoitsNoOutliers.get(0));
                 newFeature.setAttribute("ConfUppP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
                 
