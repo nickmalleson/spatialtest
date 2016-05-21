@@ -73,7 +73,7 @@ Configure the script here. (Un)comment or edit lines as appropriate to change th
 #datasource <- "../data/basic_test/" # The folder with the shapefiles
 
 # Some London data:
-datasource <- "../data/london_burglary/" 
+#datasource <- "../data/london_burglary/" 
 
 # Some Vancouver data:
 datasource <- "../data/vancouver_all/"
@@ -174,28 +174,30 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   # Aggregate the points to the area dataset
   areas$base <- poly.counts(base.data, areas)
   areas$test <- poly.counts(test.data,areas)
+  
+  # Calculate the percentage of points in each area
+  areas$baseProp <- 100 * areas$base / sum(areas$base)
+  areas$testProp <- 100 * areas$test / sum(areas$test)
 
   len <- length(areas) # The number of areas
-  tot <- sum(areas$base)    # The number of crimes
+  tot <- sum(areas$base)    # The number of base crimes
+
+  # Store the results of the montecarlo simulations in a new data.frame
+  monte.carlo <- areas
   
-  # An array to store the results of each monte carlo iteration temporarily.
-  # This is in long form (one row per crime). Dim 1=i, 2=sampled data (temp)
-  result <- array(0,c(2,tot))
+  # Now run the Monte-Carlo simulation as follows.
+  # 1. Sample the test points (remove 15% at random) and remember the sample size
+  # 2. Count the number of points within each area (not necessary?)
+  # 3. Calculat the proportion of test points (using the sample size from (1))
+  # 4  REPEAT 100 TIMES
+  # 5. For each area, rank the proportions of test points in each iteration and remove outliers
+  # 6. The top and bottom numbers of test points give the confidence intervals.
+  # 7. Calculate s-index for each area
   
-  # Generate the long form of the data for sampling - one row per crime
-  # (actually it's one crime per colum technically, but that doesn't really matter)
-  ct <- 0 # counter
-  for (i in 1:len) {
-    start <- ct + 1
-    # XXXX Is there a bug here?? If there are no crimes in area i then end<start. I'll experiment
-    # with this in the latter implementation. ONCE I'VE FIXED THE PROBLEM, COME BACK HERE
-    # AND GET RID OF THIS TEXT OR CHANGE THE CODE SO THAT IT IS CORRECT
-    end <- start + areas$base[i] - 1 # Number of crimes in area i
-    result[1,c(start:end)] <- i
-    ct <- end
-  }
+  XXXX
   
-  # Now run the Monte-Carlo simulation
+  
+  
   
   # Store the results of each iteration in the monte.carlo array.
   # N columns are for the simulations for each run, remaining three columns are for the mean
@@ -275,6 +277,11 @@ result <- spatialtest(
 
 print(result)
 
+# Write out to shapefile for sanity checking
+#writeOGR(result, ds = datasource, layer= "vancouver_test_r", driver = "ESRI Shapefile", overwrite_layer = TRUE)
+
+
+
 ```
 
 ### Plot the results
@@ -304,7 +311,9 @@ First plot all of the samples against the original observations.
 
 ```
 
-Plot the mean and the confidence intervals for each area
+Plot the mean and the confidence intervals for each area.
+
+XXXX - why the mean? Should use number of test points instead? (I tried that and often the number of test points was outside of its own confidence interval!!)
 
 ```{r A-plotConfInt}
 
@@ -351,7 +360,7 @@ Plot the mean and the confidence intervals for each area along with the number o
   
   legend(x=0, y=max(result$base), 
          c('Mean','Confidence intervals', 'Test value within intervals', 'Test value outside intervals'), 
-         pch=16, col=c("black","grey","blue", "green"), cex=0.8)
+         pch=16, col=c("black","grey","blue", "red"), cex=0.8)
 
 ```
 
