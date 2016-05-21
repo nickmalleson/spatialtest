@@ -207,9 +207,13 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
     
   for (i in 1:N) { # (Could do this bit multi-process)
     #resample (NOT SURE HOW THIS WORKS!!)
-    mc.samp <- trunc(runif(tot,min = 1,max = (tot + 1))) # Create a random number for each row
+    
+    # Create a random number for each row drawn from a uniform distribution
+    mc.samp <- trunc(runif(tot,min = 1,max = (tot + 1))) 
     result[2,(1:tot)] <- result[1,mc.samp[1:tot]] # Store sampled data in result[2,] temporarily
-    for (j in 1:len) {
+    
+    # For each area, reaggregate
+    for (j in 1:len) { 
       monte.carlo[i,j] <- sum(result[2,] == j) #compute reaggregate to areas
     }
   }
@@ -219,8 +223,8 @@ spatialtest <- function(basepoints, testpoints, areas, get.monte.carlo=FALSE) {
   for (i in 1:len) {
     monte.carlo[(N + 1),i] <- mean(monte.carlo[c(1:N),i])
     temp[] <- sort(monte.carlo[c(1:N),i])
-    monte.carlo[(N + 2),i] <- temp[0.95 * N] #upper
-    monte.carlo[(N + 3),i] <- temp[0.05 * N] #lower
+    monte.carlo[(N + 2),i] <- temp[0.975 * N] #upper
+    monte.carlo[(N + 3),i] <- temp[0.025 * N] #lower
   }
   
   # At this point we can just return the full monte carlo results if that's what the caller wants
