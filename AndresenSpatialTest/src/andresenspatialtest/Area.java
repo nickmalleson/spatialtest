@@ -36,8 +36,6 @@ public class Area {
     List<Double> percentageTestPoints;
     /** The percentage of test points with outliers removed */
     List<Double> pTestPoitsNoOutliers;
-    /** The number of test points with outliers removed (useful for confidence intervals but not used in the analysis) */
-    List<Integer> numTestPoitsNoOutliers;
     /** The S-Index value for this area */
     double sVal;
     /** The actual number (and percentage) of test points in the area, used for outputting.

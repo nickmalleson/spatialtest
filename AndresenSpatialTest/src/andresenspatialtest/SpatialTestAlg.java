@@ -78,6 +78,9 @@ public class SpatialTestAlg {
     private List<Geometry> baseGeometries;
     private List<Geometry> testGeometries;
     private List<Area> areas; // Area objects represent each area and store number of base/test points
+    // Useful for converting percentages of points to counts
+    private int totalBasePoints ;       // These are required to calculate percentages
+    private int absTotalTestPoints;      // (called absTotal to differentiate with totals calculated by monte carlo)
     // Other variables
     private int monteCarlo = 100;			// Number of times to run Monte Carlo simulation
     private int samplePercentage = 85;  // Percenatage of observations to use in a test sample.
@@ -161,8 +164,8 @@ public class SpatialTestAlg {
 
         // Need to know how many base and test points there are in total for calculating
         // percentages later.
-        int totalBasePoints = this.baseGeometries.size(); // These are required to calculate percentages
-        int absTotalTestPoints = this.testGeometries.size(); // (called absTotal to differentiate with totals calculated by monte carlo)
+        totalBasePoints = this.baseGeometries.size(); // These are required to calculate percentages
+        absTotalTestPoints = this.testGeometries.size(); // (called absTotal to differentiate with totals calculated by monte carlo)
 
         /* Count the number of base and test features in each area. These are stored in the
         Area objects */
@@ -210,29 +213,23 @@ public class SpatialTestAlg {
             a.absPercentageTestPoints = 100 * ((double) a.absNumTestPoints / absTotalTestPoints);
         }
 
-        /* For each area, rank the percentages in ascending order and remove outliers.
-        Also do this for the number of test points (but this isn't used in the analysis) */
+        /* For each area, rank the percentages in ascending order and remove outliers. */
         double removePercentage = (100.0 - this.confidenceInterval) / 100.0;
         int numToRemove = (int) Math.round((this.monteCarlo * removePercentage) / 2.0); // The number of samples to remove
         output("Ranking percentages in ascending order and removing " + numToRemove + " outliers from top and bottom");
         for (Area a : this.areas) {
             // Sort the list of percentages
             Double[] percentages = a.percentageTestPoints.toArray(new Double[a.percentageTestPoints.size()]);
-            Integer[] numbers = a.numTestPoints.toArray(new Integer[a.numTestPoints.size()]);
             Arrays.sort(percentages);
-            Arrays.sort(numbers);
             // (List converted to a Vector to allow remove() operation, otherwise not supported)
             a.pTestPoitsNoOutliers = new Vector<Double>(Arrays.asList(percentages));
-            a.numTestPoitsNoOutliers = new Vector<Integer>(Arrays.asList(numbers));
 
             // Remove upper and lower outliers
             for (int i = 0; i < numToRemove; i++) { // Remove from start of list
                 a.pTestPoitsNoOutliers.remove(0); // (all objects shifted along when one removed)
-                a.numTestPoitsNoOutliers.remove(0);
             }
             for (int i = 0; i < numToRemove; i++) {// And from the end
                 a.pTestPoitsNoOutliers.remove(a.pTestPoitsNoOutliers.size() - 1);
-                a.numTestPoitsNoOutliers.remove(a.numTestPoitsNoOutliers.size() - 1);
             }
         }
 
@@ -430,16 +427,26 @@ public class SpatialTestAlg {
                 }
 
                 newFeature.setAttribute(SIndexColumnName, a.sVal);
+                
                 newFeature.setAttribute("NumBsePts", a.numBasePoints);
                 newFeature.setAttribute("NumTstPts", a.absNumTestPoints);
                 newFeature.setAttribute("PctBsePts", a.percentageBasePoints);
                 newFeature.setAttribute("PctTstPts", a.absPercentageTestPoints);
                 
-                // Also add the confidence intervals
-                newFeature.setAttribute("ConfLow",  a.numTestPoitsNoOutliers.get(0)); // The lower bound on absolute number of points (useful to see)
-                newFeature.setAttribute("ConfUpp",  a.numTestPoitsNoOutliers.get(a.numTestPoitsNoOutliers.size()-1));
+                // Also add the confidence intervals. Do the percentages, which are actually used in the analysis,
+                // and also calculate the associated counts of points (useful to report but not actually used)
+
                 newFeature.setAttribute("ConfLowP", a.pTestPoitsNoOutliers.get(0));
                 newFeature.setAttribute("ConfUppP", a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1));
+                
+                newFeature.setAttribute("ConfLow",  
+                        Math.round(a.pTestPoitsNoOutliers.get(0) * absTotalTestPoints / 100)); // The lower bound on absolute number of points (useful to see)
+                //newFeature.setAttribute("ConfLow",  a.numTestPoitsNoOutliers.get(0)); // The lower bound on absolute number of points (useful to see)
+                newFeature.setAttribute("ConfUpp",  
+                        Math.round(a.pTestPoitsNoOutliers.get(a.pTestPoitsNoOutliers.size()-1) * absTotalTestPoints / 100));
+                //newFeature.setAttribute("ConfUpp",  a.numTestPoitsNoOutliers.get(a.numTestPoitsNoOutliers.size()-1));
+                
+
                 
                 outFeatures.add(newFeature);
             }
