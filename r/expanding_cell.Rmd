@@ -1,0 +1,245 @@
+---
+title: "Multiscale Spatial Error Assessment"
+author: "Nick Malleson"
+date: '`r format(Sys.time(), "%d %B, %Y (%H:%M)")`'
+output:
+  html_document: 
+    toc: yes
+    pandoc_args: [
+      "+RTS", "-K64m",
+      "-RTS"
+    ]
+  pdf_document:
+    fig_crop: no
+    highlight: kate
+    keep_tex: yes
+    latex_engine: xelatex
+    number_sections: yes
+fontsize: 10pt
+---
+
+```{r initialise, echo=FALSE, message=FALSE, warning=FALSE}
+setwd('~/research_not_syncd/git_projects/spatialtest/r/')
+
+library(GISTools)
+#library(rgeos)    # For things like gIntersects
+library(rgdal)     # For reading shapefiles
+library(raster)    # For creating regular grids
+#library(plyr)     # For counting and aggregating
+#library(tmap)     # For thematic maps
+library(classInt) # Jenks natural breaks
+#library(png)      # For loading pngs after they have been written
+#library(grid)     # so that they can be embedded in knitted documents
+#library(spdep)    # For doing the spatial regression, contiguity matrices, etc.
+#library(GWmodel)  # For geographically weighted regression (GWR)
+#library(MASS)     # For stepwise regression (stepAIC())
+#library(pander)   # For printing tables nicely
+#library(MVN)      # For testing for multivariate normality (MVN)
+#library(RColorBrewer) # For making nice colour themes
+
+
+```
+
+
+
+<img style="float:right; width:50%"
+src="http://www.geog.leeds.ac.uk/courses/other/programming/practicals/general/modelling/validation/multiscale-code/images/figure2.jpg"
+/>
+
+# Multiscale Spatial Error Assessment
+
+This is the R implementation of the Multiscale Spatial Error Assessment method (aka [Multiscale Validation](http://www.geog.leeds.ac.uk/courses/other/programming/practicals/general/modelling/validation/multiscale-code/2.html)). 
+
+The aim of the method is to take two point-patterns, iteratively aggregate the points to cells of increasing size, and calculate the error between the two data sets at the different grid resoultions. See the right images for an example (from  [here](http://www.geog.leeds.ac.uk/courses/other/programming/practicals/general/modelling/validation/multiscale-code/2.html)).
+
+Ultimately the method will be converted into a (suite of) function(s) and integrated with the Andresen's S index.
+
+The method has has been used in the following paper:
+
+Malleson, N., A. Heppenstall, L. See, A. Evans (2013) Using an agent-based crime simulation to predict the effects of urban regeneration on individual household burglary risk. _Environment and Planning B: Planning and Design._ 40(3) 405-426. Available [here](http://www.envplan.com/abstract.cgi?id=b38057) and [here](http://nickmalleson.co.uk/wp-content/uploads/2013/05/EPB-V6-forBlog.pdf) (if you don't have access to the journal)
+
+Thanks to Lex Comber and Chris Brunsdon for their excellent book 'R for Spatial Analysis and Mapping'. I got most of the R GIS stuff from there.
+
+Brunsdon, C and Comber, L (2015) _An Introduction to R for Spatial Anaysis and Mapping_. Sage
+
+<img style="float:right; width:40%"
+src="http://www.geog.leeds.ac.uk/courses/other/programming/practicals/general/modelling/validation/multiscale-code/images/graph.jpg"
+/>
+
+## Configuration
+
+Configure the script here. (Un)comment or edit lines as appropriate to change the data used and the parameters for the method.
+
+```{r config}
+N <- 10 # The number of cell resolutions to run. (1=just one big cell surrounding all of the data)
+
+# For the basic test:
+#datasource <- "../data/basic_test/" # The folder with the shapefiles
+
+# Some London data:
+#datasource <- "../data/london_burglary/" 
+
+# Some Vancouver data:
+datasource <- "../data/vancouver_all/"
+
+base.layer <- "points1" # THe name of the base dataset
+test.layer <- "points2" # THe name of the test dataset
+#areas.layer <- "areas"  # The polygon boundary file
+
+# multiprocess <- FALSE # Whether to run the simulation using multiple cores
+```
+ 
+## Read Data
+
+```{r readData, message=FALSE}
+
+# Read some data
+
+#areas <- readOGR(ds = datasource, layer=areas.layer)
+base.data <- readOGR(ds = datasource, layer=base.layer)
+test.data <- readOGR(ds = datasource, layer=test.layer)
+
+
+#plot(areas)
+plot(base.data, col="blue")
+plot(test.data, col="red",add=T)
+
+```
+
+## Run the Error Assessment Method
+
+The method works as follows:
+
+  1. Generate the grids.
+    a. Begin by creating one large grid over the entire study area
+    a. Label each grid with a number (e.g. 'a')
+    a. Split the grid into four and give each cell a new label (e.g. 'aa', 'ab', 'ac', 'ad')
+    a. Repeat (a-c) until a threshold (N) has been reached
+    
+  1. Aggregate the points to each of the smallest cells.
+  
+  1. Calculate the aggregate number of points in each of the larger cells using the labels (this is more efficient as it doesn't require the points to be re-aggregated each time.)
+  
+  1. Map and graph the results
+
+```{r runMethod}
+
+# Because each cell needs a unique label, make a very long list of letters that can be drawn from iteratively. 
+# It needs to be long enough to generate at least N unique labels
+#all.letters <- c( )
+#for (i in seq(1,ceiling(N/24))) {
+#  all.letters <- c(all.letters,letters[seq( from = 1, to = 24 )])
+#}
+
+# Store all grids (data frames) in a big long list
+results <- list()
+
+bb <- bbox(base.data + test.data) # A bounding box around all points
+
+# Create the grids - adapted from Brunsdon & Comber (2015, p150)
+for (i in seq(1,N)) {
+  # Cell size is the total width divided by the number of cells to draw so far (i)
+  cell.width <- (bb[1,2] - bb[1,1]) / i
+  cell.height <- (bb[2,2] - bb[2,1]) / i
+  
+  # Need to calculate the centre of the bottom-right cell
+  centre.x <- bb[1,1] + ( cell.width / 2 )
+  centre.y <- bb[2,1] + ( cell.height / 2 )
+  
+  # Create a grid  
+  grd <- GridTopology(
+    cellcentre.offset = c(centre.x, centre.y), # No offset, the grid will just cover all the points
+    cellsize = c(cell.width, cell.height),
+    cells.dim = c(i,i)
+  )
+  
+  num.cells <- i * i
+  
+  # Convert the grid into a SpatialPolygonsDataFrame
+  spdf <- SpatialPolygonsDataFrame(
+    as.SpatialPolygons.GridTopology(grd),
+    data = data.frame(c(1:num.cells)),
+    match.ID = FALSE
+  )
+  proj4string(spdf) <- proj4string(test.data)
+  names(spdf) <- "CellID" # Name the column
+  
+  # Aggregat the points
+  spdf@data$base <- poly.counts(base.data, spdf)
+  spdf@data$test <- poly.counts(test.data, spdf)
+  
+  # Calculate the errors (XXXX just absolute difference for now)
+  spdf@data$abs.diff <- sqrt( ( spdf@data$base - spdf@data$test)**2 )
+  
+  # Store this result
+  results[[i]] <- spdf
+  
+} # for
+  
+```
+
+## Map the results
+
+For a sanity check: map the total number of base and test points for some different grids
+
+```{r map.totals }
+par(mfrow=c(2,4))
+
+#plot(results[[length(results)]])
+#points(base.data)
+for (i in 4:1) {
+  index <- round(length(results) / i )
+  choropleth(results[[index]], results[[index]]@data$base, main=paste("Base points",i))
+}
+
+#plot(results[[length(results)]])
+#points(test.data)
+for (i in 4:1) {
+  index <- round(length(results) / i )
+  choropleth(results[[index]], results[[index]]@data$test, main=paste("Test points",i))
+}
+```
+
+# Now map the absoulte difference
+
+```{r map.abs.diff}
+par(mfrow=c(2,2))
+for (i in 4:1) {
+  index <- round(length(results) / i )
+  choropleth(results[[index]], results[[index]]@data$abs.diff, main=paste("Absoulte difference",i))
+}
+```
+
+Finally make a fuzzy grid of all results
+
+```{r map.abs.diff.fuzzy}
+par(mfrow=c(1,1))
+
+statistic <- "abs.diff" # The statistic to map
+last.result <- results[[length(results)]] # Convenience for list result generated (the smallest grid)
+
+# Shading
+shades <- shading(
+    classIntervals(last.result@data$abs.diff, n = 8, style = 'kmeans')$brks,
+    cols=add.alpha(brewer.pal(9,'Reds'), (1/N)) 
+)
+
+choropleth(
+  last.result, last.result@data$abs.diff,
+  shading = shades,
+  main="Fuzzy Absoulte difference",
+  lty=0
+  )
+
+for ( index in 1:(N-1)) {
+  choropleth( results[[index]], results[[index]]@data$abs.diff,
+  shading = shades,
+  lty=0,
+  add=TRUE)
+}
+
+```
+
+## Graph the errors
+
+XXXX HERE
