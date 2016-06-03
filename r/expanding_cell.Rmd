@@ -107,7 +107,9 @@ plot(test.data, col="red",add=T)
 
 ```
 
-## Run the Error Assessment Method
+## The Multi-Scale Error Assessment Method (MSEA)
+
+### Define the MSEA
 
 The method works as follows:
 
@@ -124,79 +126,163 @@ The method works as follows:
   1. Map and graph the results
   
   
-  XXXX HERE - CONVERT TO A FUNCTION
+The following defines a function that will run the method.
 
-```{r runMethod}
+```{r defineMSEA}
 
-bb <- bbox(base.data + test.data) # A bounding box around all points
+#' Multi-Scale Error Assessment (MSEA).
+#'
+#' Run the Multi-Scale Error Assessment (MSEA) method, returning the difference between two point data sets at different geographical scales using different measures of error
+#' 
+#' XXXX OTHER DETAILS (i.e. how the method works?)
+#' 
+#' @param points1 A set of points (a SpatialPointsDataFrame, or SpatialPoints object)
+#' @param points2 The set of points to compare against (another SpatialPointsDataFrame or SpatialPoints object)
+#' @param N The number of times to sub-divide the largest cell. I.e. if N=20 then the smallest grid at which error is calculated will be 20*20 cells.
+#'
+#' @return An list that encapsulates the results of the test as well as some other useful information:
+#' 
+#'  results - a list of the individual grids computed for each cell size. This will have length N. Each item in the list is a SpatialPolygonsDataFrame with the following attributes:
+#'  \itemize{
+#'  \item{"CellID"}{A unique numerical ID for each cell in the grid}
+#'  \item{"points1"}{The number of points from the points1 dataset that fall within the cell}
+#'  \item{"points2"}{The number of points from the points2 dataset that fall within the cell}
+#'  \item{"p1.pct"}{The percentage of points from the points1 dataset that fall within the cell}
+#'  \item{"p2.pct"}{The percentage of points from the points1 dataset that fall within the cell}
+#'  \item{"diff"}{The difference in the number of points (points1 - points2)}
+#'  \item{"abs.diff"}{The absolute difference in the number of points}
+#'  \item{"abs.pct.diff"}{The absolute difference in the percentages (nice to map)}
+#' }
+#'
+#'  cell.areas - A vector (length N) with the square area of a cell in each grid
+#'
+#'  num.cells - A vector (length N) with the number of cells in each grid
+#'
+#'  rss - a vector of length N with the residual sum of squares error value for each grid
+#'
+#'  r.squared - a vector of length N with the R-Squared error for each grid
+#'
+#'  rmse - a vector of length N with the Root Mean Square Error value for each grid
+#
+#' @examples
+#' rmse(points1, points2)
+msea <- function(points1, points2, N=20) {
+  
+  # Check that the projections are the same
+  if ( proj4string(points1) != proj4string(points2) ) {
+    warning("The points1 and points2 projections are different, this will probably lead to catastrophic results!")
+  }
+    
+  bb <- bbox(points1 + points1) # A bounding box around all points
+  
+  # Store all grids (data frames) in a big long list
+  results <- list()
+  # Also remember some other things that are useful later
+  cell.areas <- c() # The area of the cells
+  num.cells <- c()  # The number of cells in each iteration
+  
+  # Create the grids - adapted from Brunsdon & Comber (2015, p150)
+  for (i in seq(1,N)) {
+    # Cell size is the total width divided by the number of cells to draw so far (i)
+    cell.width <- (bb[1,2] - bb[1,1]) / i
+    cell.height <- (bb[2,2] - bb[2,1]) / i
+    cell.areas <- c(cell.areas, (cell.width * cell.height) ) # Also remember the cell area for later
+    
+    # For each resolution, repeat a few times by slightly shifting each grid in N, E, S, W to lessen the impact of MAUP
+    # NOT IMPLEMENTED YET. SLIGHTLY TRICKY BECAUSE GRID WILL NEED TO BE BIGGER OTHERWISE SOME POINTS WILL NOT BE COVERED
+    for (shift in 1:1) {
+      # Need to calculate the centre of the bottom-right cell
+      if (shift==1) { # This is the grid with no shifting (i.e. it fits perfectly over the study area)
+        centre.x <- bb[1,1] + ( cell.width / 2 )
+        centre.y <- bb[2,1] + ( cell.height / 2 )
+      }
+      # .. WILL IMPLEMENT REMAINING SHIFTS HERE
+      
+      # Create a grid  
+      grd <- GridTopology(
+        cellcentre.offset = c(centre.x, centre.y), # No offset, the grid will just cover all the points
+        cellsize = c(cell.width, cell.height),
+        cells.dim = c(i,i)
+      )
+      
+      number.of.cells <- i * i
+      num.cells <- c(num.cells, number.of.cells) # Remember the number of cells in this iteration
+      
+      # Convert the grid into a SpatialPolygonsDataFrame
+      spdf <- SpatialPolygonsDataFrame(
+        as.SpatialPolygons.GridTopology(grd),
+        data = data.frame(c(1:number.of.cells)),
+        match.ID = FALSE
+      )
+      proj4string(spdf) <- proj4string(points1)
+      names(spdf) <- "CellID" # Name the column
+      
+      # Aggregat the points
+      spdf@data$points1 <- poly.counts(points1, spdf)
+      spdf@data$points2 <- poly.counts(points2, spdf)
+      
+      # Calculate percentages of points in each area (might be useful)
+      spdf@data$p1.pct <- 100 * spdf@data$points1 / sum(spdf@data$points1 )
+      spdf@data$p2.pct <- 100 * spdf@data$points2 / sum(spdf@data$points2 )
+      
+      # Calculate the errors 
+      
+      # Difference in the number of points
+      spdf@data$diff <- spdf@data$points1 - spdf@data$points2
+      # Absolute difference
+      spdf@data$abs.diff <- abs(spdf@data$points1 - spdf@data$points2)
+      
+      # Absolute Difference in percentages
+      spdf@data$abs.pct.diff <- abs(spdf@data$p1.pct - spdf@data$p2.pct)
+      
+      # Store this result
+      results[[i]] <- spdf
+    
+    } # for shifting grids (not currently used)
+    
+  } # for cell sizes
+  
+  # Now calculte the errors
+  rss <- c() # Residual sum of squares
+  r.squared <- c()
+  rmse <- c()
+  
+  
+  for (i in 1:length(results)) {
+    
+    the.result <- results[[i]]@data # Convenience for referring to the current result we're looking at
+    #the.result.nozero <- results[[i]]@data # Convenience for referring to the current result we're looking at
+   
+    # RSS 
+    rss <- c(rss, sum( ( the.result$points1 - the.result$points2 )**2 ))
+    # R squared
+    r.squared <- c(r.squared, summary(lm(the.result$points1 ~ the.result$points2, data=the.result))$r.squared )
+    # RMSE
+    rmse <- c(rmse, rmse(the.result$points1, the.result$points2) )
+    
+  }
+  
+  # Return the results
+  r <- list(
+    "results" = results,
+    "cell.areas" =cell.areas,
+    "num.cells" = num.cells,
+    "rss" = rss,
+    "r.squared" = r.squared,
+    "rmse" = rmse
+  )
+  return(r)
+  
+} # function
+  
+```
 
-# Store all grids (data frames) in a big long list
-results <- list()
-# Also remember some other things that are useful later
-cell.areas <- c() # The area of the cells
-num.cells <- c()  # The number of cells in each iteration
+Now run the function
 
-# Create the grids - adapted from Brunsdon & Comber (2015, p150)
-for (i in seq(1,N)) {
-  # Cell size is the total width divided by the number of cells to draw so far (i)
-  cell.width <- (bb[1,2] - bb[1,1]) / i
-  cell.height <- (bb[2,2] - bb[2,1]) / i
-  cell.areas <- c(cell.areas, (cell.width * cell.height) ) # Also remember the cell area for later
-  
-  # For each resolution, repeat a few times by slightly shifting each grid in N, E, S, W to lessen the impact of MAUP
-  # NOT IMPLEMENTED YET. SLIGHTLY TRICKY BECAUSE GRID WILL NEED TO BE BIGGER OTHERWISE SOME POINTS WILL NOT BE COVERED
-  for (shift in 1:1) {
-    # Need to calculate the centre of the bottom-right cell
-    if (shift==1) { # This is the grid with no shifting (i.e. it fits perfectly over the study area)
-      centre.x <- bb[1,1] + ( cell.width / 2 )
-      centre.y <- bb[2,1] + ( cell.height / 2 )
-    }
-    # .. WILL IMPLEMENT REMAINING SHIFTS HERE
-    
-    # Create a grid  
-    grd <- GridTopology(
-      cellcentre.offset = c(centre.x, centre.y), # No offset, the grid will just cover all the points
-      cellsize = c(cell.width, cell.height),
-      cells.dim = c(i,i)
-    )
-    
-    number.of.cells <- i * i
-    num.cells <- c(num.cells, number.of.cells) # Remember the number of cells in this iteration
-    
-    # Convert the grid into a SpatialPolygonsDataFrame
-    spdf <- SpatialPolygonsDataFrame(
-      as.SpatialPolygons.GridTopology(grd),
-      data = data.frame(c(1:number.of.cells)),
-      match.ID = FALSE
-    )
-    proj4string(spdf) <- proj4string(test.data)
-    names(spdf) <- "CellID" # Name the column
-    
-    # Aggregat the points
-    spdf@data$base <- poly.counts(base.data, spdf)
-    spdf@data$test <- poly.counts(test.data, spdf)
-    
-    # Calculate percentages of points in each area (might be useful)
-    spdf@data$base.prop <- 100 * spdf@data$base / sum(spdf@data$base )
-    spdf@data$test.prop <- 100 * spdf@data$test / sum(spdf@data$test )
-    
-    # Calculate the errors 
-    
-    # Difference in the number of points
-    spdf@data$diff <- spdf@data$base - spdf@data$test
-    # Absolute difference
-    spdf@data$abs.diff <- abs(spdf@data$base - spdf@data$test)
-    
-    # Difference in proportions
-    spdf@data$abs.prop.diff <- spdf@data$base.prop - spdf@data$test.prop
-    
-    # Store this result
-    results[[i]] <- spdf
-  
-  } # for shifting grids
-  
-} # for cell sizes
-  
+```{r runMSEA}
+
+r <- msea(base.data, test.data)
+
 ```
 
 ## Map the results
@@ -209,15 +295,15 @@ par(mfrow=c(2,4))
 #plot(results[[length(results)]])
 #points(base.data)
 for (i in 4:1) {
-  index <- round(length(results) / i )
-  choropleth(results[[index]], results[[index]]@data$base, main=paste("Base points",i))
+  index <- round(length(r$results) / i )
+  choropleth(r$results[[index]], r$results[[index]]@data$points1, main=paste("PointsA",i))
 }
 
 #plot(results[[length(results)]])
 #points(test.data)
 for (i in 4:1) {
-  index <- round(length(results) / i )
-  choropleth(results[[index]], results[[index]]@data$test, main=paste("Test points",i))
+  index <- round(length(r$results) / i )
+  choropleth(r$results[[index]], r$results[[index]]@data$points2, main=paste("PointsB",i))
 }
 ```
 
@@ -226,8 +312,8 @@ for (i in 4:1) {
 ```{r map.abs.prop.diff}
 par(mfrow=c(2,2))
 for (i in 4:1) {
-  index <- round(length(results) / i )
-  choropleth(results[[index]], results[[index]]@data$abs.prop.diff, main=paste("Absoulte difference in proportions",i))
+  index <- round(length(r$results) / i )
+  choropleth(r$results[[index]], r$results[[index]]@data$abs.pct.diff, main=paste("Absoulte difference in percentages",i))
 }
 ```
 
@@ -237,23 +323,23 @@ Finally make a fuzzy grid of all results
 par(mfrow=c(1,1))
 
 statistic <- "abs.prop.diff" # The statistic to map
-last.result <- results[[length(results)]] # Convenience for list result generated (the smallest grid)
+last.result <- r$results[[length(r$results)]] # Convenience for list result generated (the smallest grid)
 
 # Shading
 shades <- shading(
-    classIntervals(last.result@data$abs.prop.diff, n = 8, style = 'kmeans')$brks,
+    classIntervals(last.result@data$abs.pct.diff, n = 8, style = 'kmeans')$brks,
     cols=add.alpha(brewer.pal(9,'Reds'), (1/N)) 
 )
 
 choropleth(
-  last.result, last.result@data$abs.prop.diff,
+  last.result, last.result@data$abs.pct.diff,
   shading = shades,
   main="Fuzzy Absoulte difference in proportions",
   lty=0
   )
 
 for ( index in 1:(N-1)) {
-  choropleth( results[[index]], results[[index]]@data$abs.prop.diff,
+  choropleth( r$results[[index]], r$results[[index]]@data$abs.pct.diff,
   shading = shades,
   lty=0,
   add=TRUE)
@@ -278,35 +364,14 @@ Calculate the following errors:
 
 # Go through all of the results and calculate errors
 
-rss <- c() # Residual sum of squares
-r.squared <- c()
-rmse <- c()
-
-
-for (i in 1:length(results)) {
-  
-  the.result <- results[[i]]@data # Convenience for referring to the current result we're looking at
-  #the.result.nozero <- results[[i]]@data # Convenience for referring to the current result we're looking at
- 
-  # RSS 
-  rss <- c(rss, sum( ( the.result$base - the.result$test )**2 ))
-  # R squared
-  r.squared <- c(r.squared, summary(lm(the.result$base ~ the.result$test, data=the.result))$r.squared )
-  # RMSE
-  rmse <- c(rmse, rmse(the.result$base, the.result$test) )
-  
-}
-
 par(mfrow=c(2,3))
 
-plot(x=num.cells, y=rss, type='o', main="RSS", xlab="Number of cells")
-plot(x=num.cells, y=r.squared, type='o', main="R-Squared", xlab="Number of cells")
-plot(x=num.cells, y=rmse, type='o', main="RMSE", xlab="Number of cells")
-plot(x=rev(cell.areas), y=rss, type='o', main="RSS", xlab="Square area of a cell")
-plot(x=rev(cell.areas), y=r.squared, type='o', main="R-Squared", xlab="Square area of a cell")
-plot(x=rev(cell.areas), y=rmse, type='o', main="RMSE", xlab="Square area of a cell")
+plot(x=r$num.cells, y=r$rss, type='o', main="RSS", xlab="Number of cells")
+plot(x=r$num.cells, y=r$r.squared, type='o', main="R-Squared", xlab="Number of cells")
+plot(x=r$num.cells, y=r$rmse, type='o', main="RMSE", xlab="Number of cells")
+plot(x=rev(r$cell.areas), y=r$rss, type='o', main="RSS", xlab="Square area of a cell")
+plot(x=rev(r$cell.areas), y=r$r.squared, type='o', main="R-Squared", xlab="Square area of a cell")
+plot(x=rev(r$cell.areas), y=r$rmse, type='o', main="RMSE", xlab="Square area of a cell")
 
 
 ```
-
-XXXX HER
