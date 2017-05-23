@@ -1,5 +1,8 @@
 # Andresen SpatialTest
 
+**Please note that this repository is now obsolete. We have move the code to a group repository
+here: [https://github.com/sppt/sppt](https://github.com/sppt/sppt)**
+
 The spatial point pattern test was developed as part of [Martin Andresen](http://www.sfu.ca/%7Eandresen/)’s PhD Dissertation. It has been published [here](http://jrc.sagepub.com/content/48/1/58) (and elsewhere). The test measures the degree of similarity at the local level between two spatial point patterns and is an area-based test. The software has been written by [Nick Malleson](http://nickmalleson.co.uk/) in Java and has a graphical user interface
 that can be used to run the test.
 
