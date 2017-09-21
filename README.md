@@ -3,7 +3,7 @@
 The spatial point pattern test was developed as part of [Martin Andresen](http://www.sfu.ca/%7Eandresen/)’s PhD Dissertation. It has been published [here](http://jrc.sagepub.com/content/48/1/58) (and elsewhere). The test measures the degree of similarity at the local level between two spatial point patterns and is an area-based test. The software has been written by [Nick Malleson](http://nickmalleson.co.uk/) in Java and has a graphical user interface
 that can be used to run the test.
 
-Wouter Steenbeek has also produced an excellent R package to run the test. It is available at the following github repository: 
+[Wouter Steenbeek](http://woutersteenbeek.nl/) has also produced an excellent R package to run the test. It is available at the following github repository: 
 [https://github.com/wsteenbeek/sppt](https://github.com/wsteenbeek/sppt).
 
 The test takes two point shapefiles and an area shapefile, and estimates whether
